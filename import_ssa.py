@@ -290,6 +290,7 @@ def baphy_load_dataset_mateo(parmfilepath, options):
         ff_tar_events = exptevents['name'].str.contains('Target')
         ff_pre_all = exptevents['name'] == ""
         ff_post_all = ff_pre_all.copy()
+        ff_sound_all = exptevents['name'] == ""
 
         # this is the place to hijack the code and add the oddball stimulus event paradimg
         # infers the names of the stimulus form the experiment parameters
@@ -318,13 +319,16 @@ def baphy_load_dataset_mateo(parmfilepath, options):
             tag_mask_stop = (
                     "PostStimSilence , " + tags[eventidx] + " , Reference"
                     )
+            tag_mask_sound = ("Stim , " + tags[eventidx] + " , Reference")
 
             ffstart = (exptevents['name'] == tag_mask_start)
             if np.sum(ffstart) > 0:
                 ffstop = (exptevents['name'] == tag_mask_stop)
+                ffsound = (exptevents['name'] == tag_mask_sound)
             else:
                 ffstart = (exptevents['name'].str.contains(tag_mask_start))
                 ffstop = (exptevents['name'].str.contains(tag_mask_stop))
+                ffsound = (exptevents['name'].str.contains(tag_mask_sound))
 
             # create intial list of stimulus events (including pre and post stim silences)
             this_event_times = pd.concat(
@@ -370,6 +374,7 @@ def baphy_load_dataset_mateo(parmfilepath, options):
 
             ff_pre_all = ff_pre_all | ffstart
             ff_post_all = ff_post_all | ffstop
+            ff_sound_all = ff_sound_all | ffsound
 
         # generate list of corresponding pre/post events
         this_event_times2 = pd.concat(
@@ -384,9 +389,17 @@ def baphy_load_dataset_mateo(parmfilepath, options):
                 axis=1
                 )
         this_event_times3['name'] = 'PostStimSilence'
+        # generate list of corresponding sound events
+        this_event_times4 = pd.concat(
+            [exptevents.loc[ff_sound_all, ['start']],
+             exptevents.loc[ff_sound_all, ['end']]],
+            axis=1
+        )
+        this_event_times4['name'] = 'Sound'
 
         event_times = event_times.append(this_event_times2, ignore_index=True)
         event_times = event_times.append(this_event_times3, ignore_index=True)
+        event_times = event_times.append(this_event_times4, ignore_index=True)
         # event_times = pd.concat(
         #         [event_times, this_event_times2, this_event_times3]
         #         )
