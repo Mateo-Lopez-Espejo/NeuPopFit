@@ -83,7 +83,7 @@ def set_oddball_epochs(signal):
     return updated_signal
 
 def fold_oddball_signal(signal, sub_epoch):
-    #TODO is this function really necesary? kinda dumb
+    #TODO is this function really necesary? I think is already implemented in signal.as_matrix or similar
 
     '''
     given a signal, usually from an oddball experiment, finds the epoch names corresponding to all different
@@ -333,8 +333,20 @@ def response_level (signal, metric='z_score'):
     # TODO implement
 
     oddball_signal = set_oddball_epochs(signal)
-    folded_sound =
-    folded_prestim
+    signal_mean = np.nanmean(oddball_signal.as_continuous())
+    signal_std = np.nanstd(oddball_signal.as_continuous())
+
+    #folds the data into
+    sub_epochs = dict.fromkeys(['Sound', 'PreStimSilence', 'PostStimSilence'])
+    for key in sub_epochs.keys():
+        sub_epochs[key] = fold_oddball_signal(oddball_signal, sub_epoch=key)
+
+    # get the mean of silent periods
+
+
+
+    folded_sound = fold_oddball_signal(oddball_signal, sub_epoch='Sound')
+    folded_prestim = fold_oddball_signal(oddball_signal, sub_epoch='Sound')
     folded_poststim
 
 
@@ -347,9 +359,6 @@ def response_level (signal, metric='z_score'):
     act_lvl_dict = {}
 
     return act_lvl_dict
-
-
-
 
 def fast_plot(matrix):
     fig, ax = plt.subplots()
