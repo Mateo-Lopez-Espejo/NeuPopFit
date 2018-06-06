@@ -25,11 +25,13 @@ import logging
 log = logging.getLogger(__name__)
 
 
-cellid = 'chn002h-a1'
+cellid = 'gus037d-a2'
 batch = 296
-modelname = 'env100pt_dlog_fir2x15_lvl1_dexp1_basic'
 
+
+modelname = 'env100pt_dlog_fir2x15_lvl1_dexp1_basic'
 modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
+
 
 
 autoPlot = True
@@ -68,8 +70,10 @@ xfspec.append(['nems.xforms.init_from_keywords',
                {'keywordstring': modelspecname, 'meta': meta}])
 
 # xfspec += nw.generate_fitter_xfspec(cellid, batch, fitkey)
+# add jackknife, fit and predict xforms
 xfspec += xhelp.generate_fitter_xfspec(fitkey)
 
+# add metrics correlation
 xfspec.append(['nems.analysis.api.standard_correlation', {},
                ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
 
