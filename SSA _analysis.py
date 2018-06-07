@@ -390,6 +390,12 @@ def response_level (signal, metric='z_score'):
     avg_resp = {frequency: np.nanmean(np.squeeze(folded_sound), axis=0)
                 for frequency, folded_sound in pooled_by_freq.items()}
 
+    # calculates the z_score for each of the frequencies and time bins
+    zscore = {frequency: (psth - signal_mean)/signal_std for frequency, psth in avg_resp.items()}
+
+    # what
+
+
     # selects the only the sound window (excludes pre and poststim silences)
     soundwindow = get_sound_window_index(oddball_signal)
 
