@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 
 def set_oddball_epochs(signal):
-    # TODO this should be implemented instead for recordigns instead of signals
+    # TODO this should be implemented for recordigns instead of signals, What is the difference between signal and recordiing epochs?
     '''
     rename the signal epochs to a form generalized for oddball stimulus.
     i.e. (onset, standard, deviant) * (frequency 1, frequency 6).
@@ -31,7 +31,6 @@ def set_oddball_epochs(signal):
 
     # regular expression to match either SubStim or STIM tags inlcuding sound frequency and rate or ONSET
     # e.g. "STIM_25000+ONSET" or "STIM_17500+0.05" or "SUBSTIM_17500+0.05"
-    # todo check if the new Oddball implementation tags are being paresed capitalized or not (ask Stephen)
     regexp = r"((SubStim)|(STIM))_\d*\+((0\.\d*)|ONSET)"
 
     epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
@@ -68,7 +67,7 @@ def set_oddball_epochs(signal):
     updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
 
     # generates new events containing the sound time
-    new_event_name = 'Sound'
+    new_event_name = 'Stim'
 
     # checks size congruence of  PreStimSilence and PostStimSilence
     PreStimEnd = oddball_epochs.loc[oddball_epochs.name == 'PreStimSilence', ['end']].sort_values(['end'])
@@ -113,35 +112,39 @@ def get_sound_window_index(signal):
                  example_epoch_dict['REFERENCE'] - example_epoch_dict['PostStimSilence']] # start of the PostStimSilence
     return window_indexes
 
-def fold_oddball_signal(signal):
-    #TODO is this function really necesary? I think is already implemented in signal.as_matrix or similar
-
+def extract_oddball_epochs(signal, sub_epoch = None):
     '''
-    given a signal, usually from an oddball experiment, finds the epoch names corresponding to all different
-    stimulus combination i.e. center frequency (frequency 1 , frequency 2) * rate of presentation (standard, deviant)
-    folds and returs and ordered dictionary of matrices
+    returns a dictionary of the data matching each element in the usual Oddball epochs.
 
     Parameters
     ----------
     signal : A signal object
     sub_epoch : None, str
-        if none, returns the whole REFERENCE epoch, otherwise returns the epoch contained within REFERENCE
-        it should be 'Sound', 'PreStimSilence' or 'PostStimSilence'
+        if none, returns the whole REFERENCE epoch, otherwise returns the "sub epoch" contained within REFERENCE
+        it should be 'Stim', 'PreStimSilence' or 'PostStimSilence'
 
     Returns
     -------
     folded_signal : dict
-        Dictionary containing (M x N) matrixes with values for each sound type, where M is the repetition and N is time
+        Dictionary containing (M x C x N) matrixes with values for each sound type, where M is the repetition,
+        C is the channel adn N is time
 
     '''
 
     signal = signal.rasterize()
-
+    signal = set_oddball_epochs(signal)
     oddball_epoch_names = ['f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev']
+    sub_epochs_names = ['PreStimSilence', 'PostStimSilence', 'Stim']
 
-    # todo, the overlapping_epoch is not workign as expected.
-    folded_signal = {sound_type: signal.extract_epoch(sound_type) for sound_type in
-                     oddball_epoch_names}
+    if sub_epoch == None:
+        # returns the the full reference
+        folded_signal = signal.extract_epochs(oddball_epoch_names)
+    elif sub_epoch in sub_epochs_names:
+        # todo this righr now is not working for unknonw reasons. Something with the epochs or the function, ask stephen and brad respectiely
+        folded_signal = {epoch_name: signal.extract_epoch(sub_epoch, overlapping_epoch=epoch_name)
+                         for epoch_name in oddball_epoch_names}
+    else:
+        raise ValueError("sub_epoch shoudl be None 'PreStimSilence' 'Stim' or 'PostStimSilence'")
 
     return folded_signal
 
@@ -340,7 +343,7 @@ def long_stim_to_point_stim(recording, scaling='same'):
     recording.add_signal(point_stim)
     rec = recording
 
-def response_level (signal, metric='z_score'):
+def response_level (signal, metric='z_score', baseline='silence'):
     #TODO finish documentation
     '''
     given a recording object, usually from an oddball experiment, determines the responsiveness of the celle to
@@ -353,34 +356,31 @@ def response_level (signal, metric='z_score'):
     metric : string ['z_score']
         name of the metric calculated
 
+    baseine : str
+        'signal' uses the std and mean form the whole signal for z-score calculation
+        'silence' uses the std and mean form the PreStimSilence for z-score calculation
+
     Returns
     -------
     SSA_index_dict : dict
         Dictionary containing the response level values for each of the sound frequency channels
     '''
 
-    oddball_epoch_names = ['f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev']
-
-    oddball_signal = set_oddball_epochs(signal)
-    signal_mean = np.nanmean(oddball_signal.as_continuous())
-    signal_std = np.nanstd(oddball_signal.as_continuous())
-
-    # gets data points from silent parts of the recording
-    silence_epochs = dict.fromkeys(['PreStimSilence', 'PostStimSilence'])
-    for key in silence_epochs.keys():
-        silence_epochs[key] = signal.extract_epoch(key)
-
-    # get the mean of silent periods
-    # TODO is there a signal method to extract everyting but a certain epoch, not or mask
-    all_silence = np.concatenate([silence_epochs['PreStimSilence'], silence_epochs ['PostStimSilence']])
-    silence_mean = np.nanmean(all_silence)
-    silence_std = np.nanstd(all_silence)
+    if baseline == 'signal':
+        base_mean = np.nanmean(signal.as_continuous())
+        base_std = np.nanstd(signal.as_continuous())
+    elif baseline == 'silence':
+        PreStimSilence = signal.extract_epoch('PreStimSilence')
+        base_mean = np.nanmean(PreStimSilence)
+        base_std = np.nanstd(PreStimSilence)
+    else:
+        raise ValueError("unsuported baseline parameter. Use 'signal' or 'silence' ")
 
     # the "z_score" is calculated for each time bin from the average of the 'Sound' epochs for each of the stimulation
     # frequencies (f1, f2)
 
     # concatenates all sound types (onse, std, dev) by their frequency
-    folded_oddball = oddball_signal.extract_epochs(oddball_epoch_names)
+    folded_oddball = extract_oddball_epochs(signal, sub_epoch=None)
     pooled_by_freq = dict.fromkeys(['f1', 'f2'])
     for key in pooled_by_freq.keys():
         pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
@@ -391,23 +391,18 @@ def response_level (signal, metric='z_score'):
                 for frequency, folded_sound in pooled_by_freq.items()}
 
     # calculates the z_score for each of the frequencies and time bins
-    zscore = {frequency: (psth - signal_mean)/signal_std for frequency, psth in avg_resp.items()}
-
-    # what
+    z_scores = {frequency: (psth - base_mean)/base_std for frequency, psth in avg_resp.items()}
 
 
     # selects the only the sound window (excludes pre and poststim silences)
-    soundwindow = get_sound_window_index(oddball_signal)
+    soundwindow = get_sound_window_index(signal)
+    windowed_score = {frequency: z[soundwindow[0]:soundwindow[1]] for frequency, z in z_scores.items()}
 
+    # checks for significant time bins and averages z-scores, i.e.  z < -1.645 or 1.645 < z
+    mean_significant_bins = {frequency: np.nanmean(z[np.logical_or(z < -1.645 , z > 1.645)])
+                             for frequency, z in windowed_score.items()}
 
-
-
-    rec = signal
-    met = metric
-
-    act_lvl_dict = {}
-
-    return act_lvl_dict
+    return mean_significant_bins
 
 
 
@@ -422,7 +417,7 @@ output = SSA_index(recording, subset='resp')
 ####### compare folding approaches #######
 fold1 = SSA_index(recording, subset='resp', return_clasified_responses=True)
 resp = recording['resp']
-fold2 = fold_oddball_signal(set_oddball_epochs(resp))
+fold2 = extract_oddball_epochs(set_oddball_epochs(resp))
 
 for key in fold1.keys():
     x = fold1[key].flatten()
