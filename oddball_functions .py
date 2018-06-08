@@ -13,7 +13,7 @@ import joblib as jl
 import matplotlib.pyplot as plt
 
 
-def set_oddball_epochs(signal):
+def set_signal_oddball_epochs(signal):
     # TODO this should be implemented for recordigns instead of signals, What is the difference between signal and recordiing epochs?
     '''
     rename the signal epochs to a form generalized for oddball stimulus.
@@ -112,7 +112,7 @@ def get_sound_window_index(signal):
                  example_epoch_dict['REFERENCE'] - example_epoch_dict['PostStimSilence']] # start of the PostStimSilence
     return window_indexes
 
-def extract_oddball_epochs(signal, sub_epoch = None):
+def extract_signal_oddball_epochs(signal, sub_epoch = None):
     '''
     returns a dictionary of the data matching each element in the usual Oddball epochs.
 
@@ -132,23 +132,75 @@ def extract_oddball_epochs(signal, sub_epoch = None):
     '''
 
     signal = signal.rasterize()
-    signal = set_oddball_epochs(signal)
+    oddball_signal = set_signal_oddball_epochs(signal)
     oddball_epoch_names = ['f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev']
     sub_epochs_names = ['PreStimSilence', 'PostStimSilence', 'Stim']
 
     if sub_epoch == None:
         # returns the the full reference
-        folded_signal = signal.extract_epochs(oddball_epoch_names)
+        folded_signal = oddball_signal.extract_epochs(oddball_epoch_names)
     elif sub_epoch in sub_epochs_names:
         # todo this righr now is not working for unknonw reasons. Something with the epochs or the function, ask stephen and brad respectiely
-        folded_signal = {epoch_name: signal.extract_epoch(sub_epoch, overlapping_epoch=epoch_name)
+        folded_signal = {epoch_name: oddball_signal.extract_epoch(sub_epoch, overlapping_epoch=epoch_name)
                          for epoch_name in oddball_epoch_names}
     else:
         raise ValueError("sub_epoch shoudl be None 'PreStimSilence' 'Stim' or 'PostStimSilence'")
 
     return folded_signal
 
-def SSA_index_2(recording):
+def get_signal_SI(signal):
+
+    '''
+        Given the recording from an SSA object, returns the SSA index (SI) as defined by Ulanovsky et al (2003)
+
+
+        Parameters
+        ----------
+        recording : A Recording object
+            Generally the output of `model.evaluate(phi, data)`??
+        subset : string ['resp' or 'pred']
+            Name of the subset of data from which to calculate the SI,
+            either the response 'resp' or prediction 'pred'
+
+        Returns
+        -------
+        SSA_index_dict : dict
+            Dictionary containing the SI values for each of the sound frequency channels and independent of frequency
+
+        '''
+
+    get_sound_window_index(signal)
+    folded_oddball = extract_signal_oddball_epochs(signal)
+
+    # calculates PSTH
+    PSTHs = {oddball_epoch_name: np.nanmean(np.squeeze(epoch_data), axis=0)
+                for oddball_epoch_name, epoch_data in folded_oddball.items()}
+
+
+    SI_window = get_sound_window_index(signal)
+    widowed_PSTHs = {sound_type: psth[SI_window[0]: SI_window[1]] for sound_type, psth in PSTHs.items()}
+
+    # integrates values across time
+    integrated_resp = {sound_type: np.sum(win_resp) for sound_type, win_resp in widowed_PSTHs.items()}
+
+    # calculates different version of SSA index (SI)
+    SSA_index_dict = dict.fromkeys(['f1', 'f2', 'cell'])
+
+    for key, val in SSA_index_dict.items():
+        # single frequencies SI
+        if key in ['f1', 'f2']:
+            std_key = '{}_{}'.format(key, 'std')
+            dev_key = '{}_{}'.format(key, 'dev')
+            SSA_index_dict[key] = ((integrated_resp[dev_key] - integrated_resp[std_key]) /
+                                   (integrated_resp[dev_key] + integrated_resp[std_key]))
+        # Full cell SI
+        elif key == 'cell':
+            SSA_index_dict[key] = ((integrated_resp['f1_dev'] + integrated_resp['f2_dev'] -
+                                    integrated_resp['f1_std'] - integrated_resp['f2_std']) /
+                                   (integrated_resp['f1_dev'] + integrated_resp['f2_dev'] +
+                                    integrated_resp['f1_std'] + integrated_resp['f2_std']))
+
+
 
     return None
 
@@ -380,7 +432,7 @@ def response_level (signal, metric='z_score', baseline='silence'):
     # frequencies (f1, f2)
 
     # concatenates all sound types (onse, std, dev) by their frequency
-    folded_oddball = extract_oddball_epochs(signal, sub_epoch=None)
+    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=None)
     pooled_by_freq = dict.fromkeys(['f1', 'f2'])
     for key in pooled_by_freq.keys():
         pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
@@ -417,7 +469,7 @@ output = SSA_index(recording, subset='resp')
 ####### compare folding approaches #######
 fold1 = SSA_index(recording, subset='resp', return_clasified_responses=True)
 resp = recording['resp']
-fold2 = extract_oddball_epochs(set_oddball_epochs(resp))
+fold2 = extract_signal_oddball_epochs(set_signal_oddball_epochs(resp))
 
 for key in fold1.keys():
     x = fold1[key].flatten()
