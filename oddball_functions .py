@@ -202,7 +202,7 @@ def get_signal_SI(signal):
 
 
 
-    return None
+    return SSA_index_dict
 
 def SSA_index(recording, subset = 'resp', return_clasified_responses = False):
     '''
@@ -320,7 +320,7 @@ def SSA_index(recording, subset = 'resp', return_clasified_responses = False):
 
     return SSA_index_dict
 
-def long_stim_to_point_stim(recording, scaling='same'):
+def as_rasterized_point_proces(recording, scaling='same'):
 
     '''
         given a recordign, usually from an oddball experiment, takes the stimulus envelope "stim" and transforms it into
@@ -478,13 +478,13 @@ for key in fold1.keys():
     ax.scatter(x, y)
 # its working
 
-####### long_stim_to_point_stim #######
+####### as_rasterized_point_proces #######
 loaded_ctx = jl.load('/home/mateo/NeuPopFit/pickles/180601_test_context_only_load')
 fig, ax = plt.subplots()
 val = loaded_ctx['val']
 stim = val.get_signal('stim')
 ax.plot(stim.as_continuous()[0,:])
-long_stim_to_point_stim(val)
+as_rasterized_point_proces(val)
 stim = val.get_signal('stim')
 ax.plot(stim.as_continuous()[0,:])
 
