@@ -1,5 +1,3 @@
-
-import numpy as np
 import scipy.special
 import scipy.stats as stats
 import nems.preprocessing as pps
@@ -12,6 +10,7 @@ import copy
 import joblib as jl
 import matplotlib.pyplot as plt
 
+# Functions working on signal objects
 
 def set_signal_oddball_epochs(signal):
     # TODO this should be implemented for recordigns instead of signals, What is the difference between signal and recordiing epochs?
@@ -204,6 +203,201 @@ def get_signal_SI(signal):
 
     return SSA_index_dict
 
+def get_signal_activity (signal, metric='z_score', baseline='silence'):
+    #TODO finish documentation
+    '''
+    given a recording object, usually from an oddball experiment, determines the responsiveness of the celle to
+    the different sound types in the oddball context,
+
+    Parameters
+    ----------
+    signal : A signal object
+
+    metric : string ['z_score']
+        name of the metric calculated
+
+    baseine : str
+        'signal' uses the std and mean form the whole signal for z-score calculation
+        'silence' uses the std and mean form the PreStimSilence for z-score calculation
+
+    Returns
+    -------
+    SSA_index_dict : dict
+        Dictionary containing the response level values for each of the sound frequency channels
+    '''
+
+    if baseline == 'signal':
+        base_mean = np.nanmean(signal.as_continuous())
+        base_std = np.nanstd(signal.as_continuous())
+    elif baseline == 'silence':
+        PreStimSilence = signal.extract_epoch('PreStimSilence')
+        base_mean = np.nanmean(PreStimSilence)
+        base_std = np.nanstd(PreStimSilence)
+    else:
+        raise ValueError("unsuported baseline parameter. Use 'signal' or 'silence' ")
+
+    # the "z_score" is calculated for each time bin from the average of the 'Sound' epochs for each of the stimulation
+    # frequencies (f1, f2)
+
+    # concatenates all sound types (onse, std, dev) by their frequency
+    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=None)
+    pooled_by_freq = dict.fromkeys(['f1', 'f2'])
+    for key in pooled_by_freq.keys():
+        pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
+                                            sound_type.startswith(key)])
+
+    # get the PSTH for each of the frequencies
+    avg_resp = {frequency: np.nanmean(np.squeeze(folded_sound), axis=0)
+                for frequency, folded_sound in pooled_by_freq.items()}
+
+    # calculates the z_score for each of the frequencies and time bins
+    z_scores = {frequency: (psth - base_mean)/base_std for frequency, psth in avg_resp.items()}
+
+    # TODO, consider por stim silence
+    # selects the only the sound window (excludes pre and poststim silences)
+    soundwindow = get_sound_window_index(signal)
+    windowed_score = {frequency: z[soundwindow[0]:soundwindow[1]] for frequency, z in z_scores.items()}
+
+    # checks for significant time bins and averages z-scores, i.e.  z < -1.645 or 1.645 < z
+    mean_significant_bins = {frequency: np.nanmean(z[np.logical_or(z < -1.645 , z > 1.645)])
+                             for frequency, z in windowed_score.items()}
+
+    return mean_significant_bins
+
+# functions working on recordings objects
+
+def as_rasterized_point_proces(recording, scaling='same'):
+
+    '''
+        given a recordign, usually from an oddball experiment, takes the stimulus envelope "stim" and transforms it into
+        a rasterized point process. This is a rasterized signal with the same dimetions as the original signal, but the
+        stimulus appear as single ones in time marking their onset.
+
+        Parameters
+        ----------
+        recording : A Recording object
+            Generally the output of a model loader??
+
+        scaling : 'same' or positive number
+            'same' sets the amplitude of the onset valued equal to me maximum amplitud of the original stimulus
+             or set scaling value to any arbitrary positive number
+
+        Returns
+        -------
+        recording : A Recording object
+            The same recording as the input, with the 'stim' signal modified as a rasterized point process
+
+        '''
+
+    stim = recording['stim']
+
+    if isinstance(stim, signal.TiledSignal):
+        stim = stim.rasterize()
+    elif isinstance(stim, signal.RasterizedSignal):
+        pass
+    else:
+        raise ValueError("recording['stim'] is not a tiled or rasterized signal")
+
+    stim_as_matrix = stim.as_continuous()
+
+    # Gets maximun value for later normalization
+    original_max = np.nanmax(stim_as_matrix)
+
+    if stim_as_matrix.shape[0] != 2:
+        raise NotImplementedError ("more than two stimulation channels not yet supported")
+
+    # makes NANs into 0 to allowe diff working
+    nonan_matrix = copy.deepcopy(stim_as_matrix)
+    nonan_matrix[np.isnan(stim_as_matrix)] = 0
+
+    # gets the difference, padds with once 0 at the beginnign ot keep shape
+    diff_matrix = np.diff(nonan_matrix, axis=1)
+    diff_matrix = np.insert(diff_matrix, 0, 0, axis = 1)
+
+    # foces all positive values to one, the envelope might not be a square envelope. This generalizes all envelopes
+    # into a square form
+    square_tone_matrix = diff_matrix > 0
+
+    # find tone onsets
+    onset_matrix = np.diff(square_tone_matrix.astype(float), axis=1)
+    onset_matrix = np.insert(onset_matrix, 0, 0, axis=1)
+    onset_matrix = onset_matrix == 1
+    onset_matrix = onset_matrix.astype(float)
+
+    # scales to the desired amplitud
+    if scaling == 'same':
+        onset_matrix = onset_matrix * original_max
+    elif scaling > 0:
+        onset_matrix = onset_matrix * scaling
+    else:
+        raise ValueError("scaling should be either 'same' or a positive number")
+
+    # recover that nan values
+    nan_mask = np.isnan(stim_as_matrix)
+    onset_matrix[nan_mask] = np.nan
+
+    point_stim = stim._modified_copy(onset_matrix)
+    point_stim.name = 'stim'
+    recording.add_signal(point_stim)
+    rec = recording
+
+def get_recording_SI(recording):
+
+    signals = recording.signals
+
+    # for SI calculates only for resp and pred, checks if both signals are in the recording
+    relevant_keys = ['resp', 'pred']
+    if set(relevant_keys).issubset(signals.keys()):
+        pass
+    else:
+        raise ValueError("The recording does not have 'resp' and 'pred' signals")
+
+    SI_dict = {sig_key: get_signal_SI(signal) for sig_key, signal in signals.items() if sig_key in relevant_keys}
+
+    return SI_dict
+
+def get_recording_activity(recording):
+
+    signals = recording.signals
+
+    # for activity calculates only for resp and pred, checks if both signals are in the recording
+    relevant_keys = ['resp', 'pred']
+    if set(relevant_keys).issubset(signals.keys()):
+        pass
+    else:
+        raise ValueError("The recording does not have 'resp' and 'pred' signals")
+
+    resp_dict = {sig_key: get_signal_activity(signal) for sig_key, signal in signals.items() if sig_key in relevant_keys}
+
+    return resp_dict
+
+
+
+# for thesting purposes, imports a pickled context containing recording objects and modelspecs
+####### ssa index #######
+'''
+test_ctx = jl.load('/home/mateo/NeuPopFit/pickles/180531_test_context_full')
+recording = test_ctx['val'][0]
+SI  =  get_recording_SI(recording)
+
+####### activity #######
+test_ctx = jl.load('/home/mateo/NeuPopFit/pickles/180531_test_context_full')
+recording = test_ctx['val'][0]
+SI  =  get_recording_activity(recording)
+
+####### as_rasterized_point_proces #######
+loaded_ctx = jl.load('/home/mateo/NeuPopFit/pickles/180601_test_context_only_load')
+fig, ax = plt.subplots()
+val = loaded_ctx['val']
+stim = val.get_signal('stim')
+ax.plot(stim.as_continuous()[0,:])
+as_rasterized_point_proces(val)
+stim = val.get_signal('stim')
+ax.plot(stim.as_continuous()[0,:])
+'''
+
+#### graveyard
+
 def SSA_index(recording, subset = 'resp', return_clasified_responses = False):
     '''
     Given the recording from an SSA object, returns the SSA index (SI) as defined by Ulanovsky et al (2003)
@@ -319,182 +513,3 @@ def SSA_index(recording, subset = 'resp', return_clasified_responses = False):
                                     integrated_resp['f1_std'] + integrated_resp['f2_std']))
 
     return SSA_index_dict
-
-def as_rasterized_point_proces(recording, scaling='same'):
-
-    '''
-        given a recordign, usually from an oddball experiment, takes the stimulus envelope "stim" and transforms it into
-        a rasterized point process. This is a rasterized signal with the same dimetions as the original signal, but the
-        stimulus appear as single ones in time marking their onset.
-
-        Parameters
-        ----------
-        recording : A Recording object
-            Generally the output of a model loader??
-
-        scaling : 'same' or positive number
-            'same' sets the amplitude of the onset valued equal to me maximum amplitud of the original stimulus
-             or set scaling value to any arbitrary positive number
-
-        Returns
-        -------
-        recording : A Recording object
-            The same recording as the input, with the 'stim' signal modified as a rasterized point process
-
-        '''
-
-    stim = recording['stim']
-
-    if isinstance(stim, signal.TiledSignal):
-        stim = stim.rasterize()
-    elif isinstance(stim, signal.RasterizedSignal):
-        pass
-    else:
-        raise ValueError("recording['stim'] is not a tiled or rasterized signal")
-
-    stim_as_matrix = stim.as_continuous()
-
-    # Gets maximun value for later normalization
-    original_max = np.nanmax(stim_as_matrix)
-
-    if stim_as_matrix.shape[0] != 2:
-        raise NotImplementedError ("more than two stimulation channels not yet supported")
-
-    # makes NANs into 0 to allowe diff working
-    nonan_matrix = copy.deepcopy(stim_as_matrix)
-    nonan_matrix[np.isnan(stim_as_matrix)] = 0
-
-    # gets the difference, padds with once 0 at the beginnign ot keep shape
-    diff_matrix = np.diff(nonan_matrix, axis=1)
-    diff_matrix = np.insert(diff_matrix, 0, 0, axis = 1)
-
-    # foces all positive values to one, the envelope might not be a square envelope. This generalizes all envelopes
-    # into a square form
-    square_tone_matrix = diff_matrix > 0
-
-    # find tone onsets
-    onset_matrix = np.diff(square_tone_matrix.astype(float), axis=1)
-    onset_matrix = np.insert(onset_matrix, 0, 0, axis=1)
-    onset_matrix = onset_matrix == 1
-    onset_matrix = onset_matrix.astype(float)
-
-    # scales to the desired amplitud
-    if scaling == 'same':
-        onset_matrix = onset_matrix * original_max
-    elif scaling > 0:
-        onset_matrix = onset_matrix * scaling
-    else:
-        raise ValueError("scaling should be either 'same' or a positive number")
-
-    # recover that nan values
-    nan_mask = np.isnan(stim_as_matrix)
-    onset_matrix[nan_mask] = np.nan
-
-    point_stim = stim._modified_copy(onset_matrix)
-    point_stim.name = 'stim'
-    recording.add_signal(point_stim)
-    rec = recording
-
-def response_level (signal, metric='z_score', baseline='silence'):
-    #TODO finish documentation
-    '''
-    given a recording object, usually from an oddball experiment, determines the responsiveness of the celle to
-    the different sound types in the oddball context,
-
-    Parameters
-    ----------
-    signal : A signal object
-
-    metric : string ['z_score']
-        name of the metric calculated
-
-    baseine : str
-        'signal' uses the std and mean form the whole signal for z-score calculation
-        'silence' uses the std and mean form the PreStimSilence for z-score calculation
-
-    Returns
-    -------
-    SSA_index_dict : dict
-        Dictionary containing the response level values for each of the sound frequency channels
-    '''
-
-    if baseline == 'signal':
-        base_mean = np.nanmean(signal.as_continuous())
-        base_std = np.nanstd(signal.as_continuous())
-    elif baseline == 'silence':
-        PreStimSilence = signal.extract_epoch('PreStimSilence')
-        base_mean = np.nanmean(PreStimSilence)
-        base_std = np.nanstd(PreStimSilence)
-    else:
-        raise ValueError("unsuported baseline parameter. Use 'signal' or 'silence' ")
-
-    # the "z_score" is calculated for each time bin from the average of the 'Sound' epochs for each of the stimulation
-    # frequencies (f1, f2)
-
-    # concatenates all sound types (onse, std, dev) by their frequency
-    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=None)
-    pooled_by_freq = dict.fromkeys(['f1', 'f2'])
-    for key in pooled_by_freq.keys():
-        pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
-                                            sound_type.startswith(key)])
-
-    # get the PSTH for each of the frequencies
-    avg_resp = {frequency: np.nanmean(np.squeeze(folded_sound), axis=0)
-                for frequency, folded_sound in pooled_by_freq.items()}
-
-    # calculates the z_score for each of the frequencies and time bins
-    z_scores = {frequency: (psth - base_mean)/base_std for frequency, psth in avg_resp.items()}
-
-
-    # selects the only the sound window (excludes pre and poststim silences)
-    soundwindow = get_sound_window_index(signal)
-    windowed_score = {frequency: z[soundwindow[0]:soundwindow[1]] for frequency, z in z_scores.items()}
-
-    # checks for significant time bins and averages z-scores, i.e.  z < -1.645 or 1.645 < z
-    mean_significant_bins = {frequency: np.nanmean(z[np.logical_or(z < -1.645 , z > 1.645)])
-                             for frequency, z in windowed_score.items()}
-
-    return mean_significant_bins
-
-
-
-
-# for thesting purposes, imports a pickled context containing recording objects and modelspecs
-####### SSA_index #######
-test_ctx = jl.load('/home/mateo/NeuPopFit/pickles/180531_test_context_full')
-recording = test_ctx['val'][0]
-subset = 'resp'
-output = SSA_index(recording, subset='resp')
-
-####### compare folding approaches #######
-fold1 = SSA_index(recording, subset='resp', return_clasified_responses=True)
-resp = recording['resp']
-fold2 = extract_signal_oddball_epochs(set_signal_oddball_epochs(resp))
-
-for key in fold1.keys():
-    x = fold1[key].flatten()
-    y = fold2[key].flatten()
-    fig, ax = plt.subplots()
-    ax.scatter(x, y)
-# its working
-
-####### as_rasterized_point_proces #######
-loaded_ctx = jl.load('/home/mateo/NeuPopFit/pickles/180601_test_context_only_load')
-fig, ax = plt.subplots()
-val = loaded_ctx['val']
-stim = val.get_signal('stim')
-ax.plot(stim.as_continuous()[0,:])
-as_rasterized_point_proces(val)
-stim = val.get_signal('stim')
-ax.plot(stim.as_continuous()[0,:])
-
-####### response_level #######
-
-####### plot folded ######
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots()
-for key, obj in folded_sounds.items():
-    psth = np.nanmean(obj, axis=0)
-    ax.plot(psth.squeeze())
-
