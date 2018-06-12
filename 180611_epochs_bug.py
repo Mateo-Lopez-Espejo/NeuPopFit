@@ -4,6 +4,11 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
+'''
+I am having issues using the extract_epochs method when using the overlaping_epoch variable. I am trying to extract a
+sub epoch from other epochs 
+'''
+
 def set_signal_oddball_epochs(signal):
     # TODO should this be implemented for recordigns instead of signals, What is the difference between signal and recordiing epochs?
     '''
@@ -108,7 +113,7 @@ Stim = odd_sig.extract_epoch('Stim')
 f1_std_stim = odd_sig.extract_epoch('Stim', overlapping_epoch='f1_std')
 
 # the time dimention is inconsitent:
-print('f1_std: {}\nall_stim: {}\nf1_std_stim: {}'.format(f1_std.shape, Stim.shape, f1_std_stim.shape))
+print('f1_std shape: {}\nall_stim shape: {}\nf1_std_stim shape: {}'.format(f1_std.shape, Stim.shape, f1_std_stim.shape))
 
 fig, ax = plt.subplots()
 
@@ -118,3 +123,9 @@ for key, obj in toplot.items():
     psth = np.nanmean(obj,axis=0).squeeze()
     ax.plot(psth, label=key)
 ax.legend()
+
+# also, the bug is there even before adding my custom epochs
+PreStim = sig.extract_epoch('PreStimSilence')
+REF_PreStim= sig.extract_epoch('PreStimSilence', overlapping_epoch='REFERENCE')
+print('PreStimSilence shape: {}\nREF_PreStim shape: {}'.format(PreStim.shape, REF_PreStim.shape))
+
