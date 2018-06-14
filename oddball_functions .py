@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 # Functions working on signal objects
 
-def set_signal_oddball_epochs(signal):
+def set_signal_oddball_epochs_v2(signal):
     # TODO this should be implemented for recordigns instead of signals, What is the difference between signal and recordiing epochs?
     '''
     rename the signal epochs to a form generalized for oddball stimulus.
@@ -62,33 +62,51 @@ def set_signal_oddball_epochs(signal):
     for oldkey, newkey in key_mapping.items():
         oddball_epochs.name.replace(oldkey, newkey, inplace=True)
 
-    # updates epochs in form original signal into new signal
-    updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
+    # Extract relevant subepochs as matrixe to check for intersections.
 
-    # generates new events containing the sound time
-    new_event_name = 'Stim'
+    sub_epochs_keys = ['PreStimSilence', 'PostStimSilence']
+
+    sub_epochs_dict = {key: oddball_epochs.loc[
+                            oddball_epochs.name == key, ['start', 'end']
+                            ].sort_values(['end']).as_matrix()
+                       for key in sub_epochs_keys}
 
     # checks size congruence of  PreStimSilence and PostStimSilence
-    PreStimEnd = oddball_epochs.loc[oddball_epochs.name == 'PreStimSilence', ['end']].sort_values(['end'])
-    PostStimStart = oddball_epochs.loc[oddball_epochs.name == 'PostStimSilence', ['start']].sort_values(['start'])
-    if PreStimEnd.shape == PostStimStart.shape:
-        pass
-    else:
+    if sub_epochs_dict['PreStimSilence'].shape != sub_epochs_dict['PostStimSilence'].shape:
         raise ValueError('there are not equal number of PreStimSilence and PostStimSielence epochs')
 
     # chechs non overlaping of PreStimSilence and PostStimSilence
-    time_difference = PostStimStart.as_matrix() - PreStimEnd.as_matrix()
-    if np.any(time_difference<=0):
+    silence_interesection = ep.epoch_intersection(sub_epochs_dict['PreStimSilence'], sub_epochs_dict['PostStimSilence'])
+    if silence_interesection.size == 0:
         raise ValueError("there is overlap between PreStimSilence and PostStimSilence")
 
     # uses PreStimSilence ends and PostStimSilence starts to define Sound epochs
-    sound_epoch_matrix = np.stack([PreStimEnd.as_matrix().squeeze(), PostStimStart.as_matrix().squeeze()], axis=1)
-    updated_signal.add_epoch(new_event_name, sound_epoch_matrix)
+    sub_epochs_dict['Stim'] = np.stack([sub_epochs_dict['PreStimSilence'][:,1],
+                                        sub_epochs_dict['PostStimSilence'][:,0]],
+                                        axis=1)
+    # iterates over every oddball epoch and saves the intersectiosn with Pre Stim and Post
 
-    #sort epochs Todo ask brad why is this sorting not already implemented in signal.add_epoch
-    updated_signal.epochs.sort_values(by=['start', 'end'], ascending=[True,False], inplace=True)
-    updated_signal.epochs.reset_index(drop=True, inplace=True)
+    for _, oddball_key in key_mapping.items():
+        oddball_matrix = oddball_epochs.loc[oddball_epochs.name == oddball_key, ['start', 'end']
+                            ].sort_values(['end']).as_matrix()
 
+        for sub_epoch_name, sub_epoch_matrix in sub_epochs_dict.items():
+            oddball_subepoch_matrix = ep.epoch_intersection(sub_epoch_matrix, oddball_matrix)
+            oddball_subepoch_name = '{}_{}'.format(oddball_key, sub_epoch_name)
+            # concatenates new oddball_subepochs into the oddball epochs DB
+            df = pd.DataFrame(oddball_subepoch_matrix, columns=['start', 'end'])
+            df['name'] = oddball_subepoch_name
+            oddball_epochs = oddball_epochs.append(df, ignore_index=True)
+
+    # Sort epochs by time and resets indexes
+    oddball_epochs.sort_values(by=['start', 'end'], ascending=[True, False], inplace=True)
+    oddball_epochs.reset_index(drop=True, inplace=True)
+
+
+    # updates epochs in form original signal into new signal
+    updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
+
+    # something is not working with the epoch_intersection method
     return updated_signal
 
 def get_sound_window_index(signal):
@@ -513,3 +531,100 @@ def SSA_index(recording, subset = 'resp', return_clasified_responses = False):
                                     integrated_resp['f1_std'] + integrated_resp['f2_std']))
 
     return SSA_index_dict
+
+def set_signal_oddball_epochs(signal):
+    # TODO this should be implemented for recordigns instead of signals, What is the difference between signal and recordiing epochs?
+    '''
+    rename the signal epochs to a form generalized for oddball stimulus.
+    i.e. (onset, standard, deviant) * (frequency 1, frequency 6).
+    Adds a sound epoch in between the PreStimSilence and PostStimSilence
+
+    Parameters
+    ----------
+    signal: a signal object
+
+    Returns
+    -------
+    copy of the signal with renamed epochs and new sound epoch
+    '''
+
+    # regular expression to match either SubStim or STIM tags inlcuding sound frequency and rate or ONSET
+    # e.g. "STIM_25000+ONSET" or "STIM_17500+0.05" or "SUBSTIM_17500+0.05"
+    regexp = r"((SubStim)|(STIM))_\d*\+((0\.\d*)|ONSET)"
+
+    epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
+
+    # defines deviant standard and onset for each sound frequency,
+    # "STIM_25000+ONSET"
+    #  ^1   ^2    ^3     1: prefix, 2: center_frequencie, 3: standard_deviant_rates
+    center_frequencies = {float(name.split('_')[1].split('+')[0]) for name in epoch_names_to_extract}
+    standard_deviant_rates = {name.split('_')[1].split('+')[1] for name in epoch_names_to_extract}
+    standard_deviant_rates.remove('ONSET')
+    standard_deviant_rates = {float(rate) for rate in standard_deviant_rates}
+    prefix = epoch_names_to_extract[0].split('_')[0] # STIM or PreStim
+
+    # Checks the input signal has the adecuates frequencies and rates dimentions
+    if (len(standard_deviant_rates) != 2) or (len(center_frequencies) != 2):
+        raise ValueError("epochs contain {} presetnations rates, 2 are required\n"
+                         "epochs contain {} center frequencies, 2 are required".format(len(standard_deviant_rates),
+                                                                                       len(center_frequencies)))
+
+    # explicit statement of dict key to event tag mapping
+    key_mapping = {'{}_{:.0f}+{}'.format(prefix, min(center_frequencies), 'ONSET') : 'f1_onset',
+                   '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), max(standard_deviant_rates)) : 'f1_std',
+                   '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), min(standard_deviant_rates)) : 'f1_dev',
+                   '{}_{:.0f}+{}'.format(prefix, max(center_frequencies), 'ONSET') : 'f2_onset',
+                   '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), max(standard_deviant_rates)) : 'f2_std',
+                   '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), min(standard_deviant_rates)) : 'f2_dev'}
+
+    # creates new event dataframe with modified epoch names
+    oddball_epochs = copy.deepcopy(signal.epochs)
+    for oldkey, newkey in key_mapping.items():
+        oddball_epochs.name.replace(oldkey, newkey, inplace=True)
+
+    # Extract relevant subepochs as matrixe to check for intersections.
+
+    sub_epochs_keys = ['PreStimSilence', 'PostStimSilence']
+
+    sub_epochs_dict = {key: oddball_epochs.loc[
+                            oddball_epochs.name == key, ['start', 'end']
+                            ].sort_values(['end']).as_matrix()
+                       for key in sub_epochs_keys}
+
+    # checks size congruence of  PreStimSilence and PostStimSilence
+    if sub_epochs_dict['PreStimSilence'].shape != sub_epochs_dict['PostStimSilence'].shape:
+        raise ValueError('there are not equal number of PreStimSilence and PostStimSielence epochs')
+
+    # chechs non overlaping of PreStimSilence and PostStimSilence
+    silence_interesection = ep.epoch_intersection(sub_epochs_dict['PreStimSilence'], sub_epochs_dict['PostStimSilence'])
+    if silence_interesection.size == 0:
+        raise ValueError("there is overlap between PreStimSilence and PostStimSilence")
+
+    # uses PreStimSilence ends and PostStimSilence starts to define Sound epochs
+    sub_epochs_dict['Stim'] = np.stack([sub_epochs_dict['PreStimSilence'][:,1],
+                                        sub_epochs_dict['PostStimSilence'][:,0]],
+                                        axis=1)
+    # iterates over every oddball epoch and saves the intersectiosn with Pre Stim and Post
+
+    for _, oddball_key in key_mapping.items():
+        oddball_matrix = oddball_epochs.loc[oddball_epochs.name == oddball_key, ['start', 'end']
+                            ].sort_values(['end']).as_matrix()
+
+        for sub_epoch_name, sub_epoch_matrix in sub_epochs_dict.items():
+            oddball_subepoch_matrix = ep.epoch_intersection(sub_epoch_matrix, oddball_matrix)
+            oddball_subepoch_name = '{}_{}'.format(oddball_key, sub_epoch_name)
+            # concatenates new oddball_subepochs into the oddball epochs DB
+            df = pd.DataFrame(oddball_subepoch_matrix, columns=['start', 'end'])
+            df['name'] = oddball_subepoch_name
+            oddball_epochs = oddball_epochs.append(df, ignore_index=True)
+
+    # Sort epochs by time and resets indexes
+    oddball_epochs.sort_values(by=['start', 'end'], ascending=[True, False], inplace=True)
+    oddball_epochs.reset_index(drop=True, inplace=True)
+
+
+    # updates epochs in form original signal into new signal
+    updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
+
+    # something is not working with the epoch_intersection method
+    return updated_signal
