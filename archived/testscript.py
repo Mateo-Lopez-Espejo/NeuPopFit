@@ -29,6 +29,7 @@ rec = isa.baphy_load_recording_mateo(cellid, batch, options)
 #rec = nb.baphy_load_recording_nonrasterized(cellid, batch, options)
 
 #%% pickle the recording for later offline usage
+### this was a recording object with a single RasterizedSignal object inside.
 jl_path = '/home/mateo/NeuPopFit/180420_ssa_rec'
 jl.dump = (rec, jl_path)
 
