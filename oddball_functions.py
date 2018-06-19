@@ -5,137 +5,6 @@ import pandas as pd
 import nems.signal as signal
 import copy
 
-
-# modified nems functions
-
-def epoch_intersection(a, b):
-    '''
-    Compute the intersection of the epochs. Only regions in a which overlap with
-    b will be kept.
-
-    Parameters
-    ----------
-    a : 2D array of (M x 2)
-        The first column is the start time and second column is the end time. M
-        is the number of occurances of a.
-    b : 2D array of (N x 2)
-        The first column is the start time and second column is the end time. N
-        is the number of occurances of b.
-
-    Returns
-    -------
-    intersection : 2D array of (O x 2)
-        The first column is the start time and second column is the end time. O
-        is the number of occurances of the difference of a and b.
-
-    Example
-    -------
-    a:       [   ]  [         ]        [ ]
-    b:      [   ]       [ ]     []      [    ]
-    result:  [  ]       [ ]             []
-    '''
-    # Convert to a list and then sort in reversed order such that pop() walks
-    # through the occurences from earliest in time to latest in time.
-    a = a.tolist()
-    a.sort(reverse=True)
-    b = b.tolist()
-    b.sort(reverse=True)
-
-    intersection = []
-    if len(a) == 0 or len(b) == 0:
-        # lists are empty, just exit
-        result = np.array([])
-        return result
-
-    lb, ub = a.pop()
-    lb_b, ub_b = b.pop()
-
-    while True:
-        if lb > ub_b:
-            #           [ a ]
-            #     [ b ]
-            # Current epoch in b ends before current epoch in a. Move onto
-            # the next epoch in b.
-            try:
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        elif ub <= lb_b:
-            #   [  a    ]
-            #               [ b        ]
-            # Current epoch in a ends before current epoch in b. Add bounds
-            # and move onto next epoch in a.
-            try:
-                lb, ub = a.pop()
-            except IndexError:
-                break
-        elif (lb == lb_b) and (ub == ub_b):
-            #   [  a    ]
-            #   [  b    ]
-            # Current epoch in a matches epoch in b.
-            try:
-                intersection.append((lb, ub))
-                lb, ub = a.pop()
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        elif (lb <= lb_b) and (ub >= ub_b):
-            #   [  a    ]
-            #     [ b ]
-            # Current epoch in b is fully contained in the  current epoch
-            # from a. Save everything in
-            # a up to the beginning of the current epoch of b. However, keep
-            # the portion of the current epoch in a
-            # that follows the end of the current epoch in b so we can
-            # detremine whether there are additional epochs in b that need
-            # to be cut out..
-            intersection.append((lb_b, ub_b))
-            lb = ub_b
-            try:
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        elif (lb <= lb_b) and (ub >= lb_b) and (ub <= ub_b):
-            #   [  a    ]
-            #     [ b        ]
-            # Current epoch in b begins in a, but extends past a.
-            intersection.append((lb_b, ub))
-            try:
-                lb, ub = a.pop()
-            except IndexError:
-                break
-        elif (ub > lb_b) and (lb <= ub_b):
-            #   [  a    ]
-            # [       b     ]
-            # Current epoch in a is fully contained in b
-            intersection.append((lb, ub))
-            try:
-                lb, ub = a.pop()
-            except IndexError:
-                break
-        elif (ub > lb_b) and (ub < ub_b) and (lb > ub_b):
-            #   [  a    ]
-            # [ b    ]
-            intersection.append((lb, ub_b))
-            lb = ub_b
-            try:
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        else:
-            # This should never happen.
-            m = 'Unhandled epoch boundary condition. Contact the developers.'
-            raise SystemError(m)
-
-    # Add all remaining epochs from a
-    # intersection.extend(a[::-1])
-    result = np.array(intersection)
-    if result.size == 0:
-        raise Warning("Epochs did not intersect, resulting array"
-                      " is empty.")
-    return result
-
-
 # Functions working on signal objects
 
 def set_signal_oddball_epochs(signal):
@@ -198,7 +67,7 @@ def set_signal_oddball_epochs(signal):
         raise ValueError('there are not equal number of PreStimSilence and PostStimSielence epochs')
 
     # chechs non overlaping of PreStimSilence and PostStimSilence
-    silence_interesection = epoch_intersection(sub_epochs_dict['PreStimSilence'], sub_epochs_dict['PostStimSilence'])
+    silence_interesection = ep.epoch_intersection(sub_epochs_dict['PreStimSilence'], sub_epochs_dict['PostStimSilence'])
     if silence_interesection.size == 0:
         raise ValueError("there is overlap between PreStimSilence and PostStimSilence")
 
@@ -217,7 +86,7 @@ def set_signal_oddball_epochs(signal):
         ].sort_values(['end']).as_matrix()
 
         for sub_epoch_name, sub_epoch_matrix in sub_epochs_dict.items():
-            oddball_subepoch_matrix = epoch_intersection(sub_epoch_matrix, oddball_matrix)
+            oddball_subepoch_matrix = ep.epoch_intersection(sub_epoch_matrix, oddball_matrix)
             oddball_subepoch_name = '{}_{}'.format(oddball_key, sub_epoch_name)
 
             # concatenates new oddball_subepochs into the oddball epochs DB
@@ -478,7 +347,7 @@ def as_rasterized_point_process(recording, scaling='same'):
     point_stim = stim._modified_copy(onset_matrix)
     point_stim.name = 'stim'
     recording.add_signal(point_stim)
-    rec = recording
+    return recording
 
 
 def get_recording_SI(recording, sub_epoch):
@@ -804,4 +673,133 @@ def set_signal_oddball_epochs_v3(signal):
 
     # something is not working with the epoch_intersection method
     return updated_signal
+
+
+def epoch_intersection(a, b):
+    '''
+    Compute the intersection of the epochs. Only regions in a which overlap with
+    b will be kept.
+
+    Parameters
+    ----------
+    a : 2D array of (M x 2)
+        The first column is the start time and second column is the end time. M
+        is the number of occurances of a.
+    b : 2D array of (N x 2)
+        The first column is the start time and second column is the end time. N
+        is the number of occurances of b.
+
+    Returns
+    -------
+    intersection : 2D array of (O x 2)
+        The first column is the start time and second column is the end time. O
+        is the number of occurances of the difference of a and b.
+
+    Example
+    -------
+    a:       [   ]  [         ]        [ ]
+    b:      [   ]       [ ]     []      [    ]
+    result:  [  ]       [ ]             []
+    '''
+    # Convert to a list and then sort in reversed order such that pop() walks
+    # through the occurences from earliest in time to latest in time.
+    a = a.tolist()
+    a.sort(reverse=True)
+    b = b.tolist()
+    b.sort(reverse=True)
+
+    intersection = []
+    if len(a) == 0 or len(b) == 0:
+        # lists are empty, just exit
+        result = np.array([])
+        return result
+
+    lb, ub = a.pop()
+    lb_b, ub_b = b.pop()
+
+    while True:
+        if lb > ub_b:
+            #           [ a ]
+            #     [ b ]
+            # Current epoch in b ends before current epoch in a. Move onto
+            # the next epoch in b.
+            try:
+                lb_b, ub_b = b.pop()
+            except IndexError:
+                break
+        elif ub <= lb_b:
+            #   [  a    ]
+            #               [ b        ]
+            # Current epoch in a ends before current epoch in b. Add bounds
+            # and move onto next epoch in a.
+            try:
+                lb, ub = a.pop()
+            except IndexError:
+                break
+        elif (lb == lb_b) and (ub == ub_b):
+            #   [  a    ]
+            #   [  b    ]
+            # Current epoch in a matches epoch in b.
+            try:
+                intersection.append((lb, ub))
+                lb, ub = a.pop()
+                lb_b, ub_b = b.pop()
+            except IndexError:
+                break
+        elif (lb <= lb_b) and (ub >= ub_b):
+            #   [  a    ]
+            #     [ b ]
+            # Current epoch in b is fully contained in the  current epoch
+            # from a. Save everything in
+            # a up to the beginning of the current epoch of b. However, keep
+            # the portion of the current epoch in a
+            # that follows the end of the current epoch in b so we can
+            # detremine whether there are additional epochs in b that need
+            # to be cut out..
+            intersection.append((lb_b, ub_b))
+            lb = ub_b
+            try:
+                lb_b, ub_b = b.pop()
+            except IndexError:
+                break
+        elif (lb <= lb_b) and (ub >= lb_b) and (ub <= ub_b):
+            #   [  a    ]
+            #     [ b        ]
+            # Current epoch in b begins in a, but extends past a.
+            intersection.append((lb_b, ub))
+            try:
+                lb, ub = a.pop()
+            except IndexError:
+                break
+        elif (ub > lb_b) and (lb <= ub_b):
+            #   [  a    ]
+            # [       b     ]
+            # Current epoch in a is fully contained in b
+            intersection.append((lb, ub))
+            try:
+                lb, ub = a.pop()
+            except IndexError:
+                break
+        elif (ub > lb_b) and (ub < ub_b) and (lb > ub_b):
+            #   [  a    ]
+            # [ b    ]
+            intersection.append((lb, ub_b))
+            lb = ub_b
+            try:
+                lb_b, ub_b = b.pop()
+            except IndexError:
+                break
+        else:
+            # This should never happen.
+            m = 'Unhandled epoch boundary condition. Contact the developers.'
+            raise SystemError(m)
+
+    # Add all remaining epochs from a
+    # intersection.extend(a[::-1])
+    result = np.array(intersection)
+    if result.size == 0:
+        raise Warning("Epochs did not intersect, resulting array"
+                      " is empty.")
+    return result
+
 

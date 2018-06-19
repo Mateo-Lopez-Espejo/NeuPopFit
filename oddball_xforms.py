@@ -1,7 +1,7 @@
 import nems.xforms as xforms
 import nems.xform_helper as xhelp
 import oddball_functions as of
-
+import nems.analysis as na
 
 # TODO two xfroms. one transforming stimulus into rasterized point process and another to do the SI and activity metrics calculation
 
@@ -14,21 +14,37 @@ but now xfa can be len 4, where xfa[2] indicates context in keys and
 xfa[3] is context out keys
 '''
 
+
 def stim_as_rasterized_point_process(rec, **context):
-    rec = of.as_rasterized_point_proces(rec, scaling='same')
+    rec = of.as_rasterized_point_process(rec, scaling='same')
     return {'rec': rec}
 
-def calculate_oddball_metrics(rec, **context):
+def calculate_oddball_metrics(rec, sub_epoch, baseline, **context):
     SSA_index = of.get_recording_SI(rec, scaling='same')
     activity_lvl = of.get_recording_activity(rec)
-    modelspecs = nems.analysis.api.standard_correlation(est, val, modelspecs, rec=rec)
+    modelspecs = na.api.standard_correlation(est, val, modelspecs, rec=rec)
     if False:
         return {'rec': rec, }
+
+    # update modelspecs with the adecuate metadata,
+    SI = of.get_recording_SI(rec, sub_epoch)
+    modelspecs[0][0]['meta']['SSA_index'] = SI
+    RA = of.get_recording_activity(rec, sub_epoch, baseline=baseline)
+    modelspecs[0][0]['meta']['activity'] = RA
+
+
     return {'modelspecs': modelspecs}
 
 
 
 # This is her Just for reference to help me figure out how xfomrms are working
+# xfa in my case will have 4 possitions:
+# 0.    is the name of the function to run, in my particular case
+#       the above funtions e.g. 'oddball_xforms.stim_as_rasterized_point_process'
+# 1.    a dictionary with the arguments for the xform function. in the above example, no arguments {}
+#       in the case of 'oddball_xforms.calculate_oddball_metrics' probably {'sub_epoch': ['Stim', 'PostStimSilence']}
+# 3.
+
 def evaluate_step(xfa, context={}):
     '''
     Helper function for evaluate. Take one step
