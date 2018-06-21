@@ -275,7 +275,7 @@ def get_signal_activity(signal, sub_epoch, baseline='silence', metric='z_score')
 
 # functions working on recordings objects
 
-def as_rasterized_point_process(recording, scaling='same'):
+def as_rasterized_point_process(recording, scaling):
     '''
         given a recordign, usually from an oddball experiment, takes the stimulus envelope "stim" and transforms it into
         a rasterized point process. This is a rasterized signal with the same dimetions as the original signal, but the
