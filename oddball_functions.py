@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 import numpy as np
 import nems.epoch as ep
 import pandas as pd
@@ -184,7 +184,7 @@ def get_signal_SI(signal, sub_epoch):
     folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch)
 
     # calculates PSTH
-    PSTHs = {oddball_epoch_name: np.nanmean(np.squeeze(epoch_data), axis=0)
+    PSTHs = {oddball_epoch_name: np.squeeze(np.nanmean(epoch_data, axis=0))
              for oddball_epoch_name, epoch_data in folded_oddball.items()}
 
     # integrates values across time
@@ -314,7 +314,7 @@ def as_rasterized_point_process(recording, scaling):
     if stim_as_matrix.shape[0] != 2:
         raise NotImplementedError("more than two stimulation channels not yet supported")
 
-    # makes NANs into 0 to allowe diff working
+    # makes NANs into 0 to allow diff working
     nonan_matrix = copy.deepcopy(stim_as_matrix)
     nonan_matrix[np.isnan(stim_as_matrix)] = 0
 
@@ -360,6 +360,7 @@ def get_recording_SI(recording, sub_epoch):
     else:
         raise ValueError("The recording does not have 'resp' and 'pred' signals")
 
+    # TODO,  this is raising and exception as a whole, but not when run one by one....
     SI_dict = {sig_key: get_signal_SI(signal, sub_epoch) for sig_key, signal in signals.items() if
                sig_key in relevant_keys}
 

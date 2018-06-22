@@ -1,6 +1,9 @@
 import oddball_functions as of
 
 def stim_as_rasterized_point_process(rec, scaling, **context):
+    # rasterizes all signal
+    rec['resp'] = rec['resp'].rasterize()
+    rec['stim'] = rec['stim'].rasterize()
     rec = of.as_rasterized_point_process(rec, scaling=scaling)
     return {'rec': rec}
 

@@ -11,12 +11,12 @@ import nems_db.xform_wrappers as nw
 import logging
 import oddball_xforms
 
-def single_oddball_processing():
+def single_oddball_processing(cellid):
     log = logging.getLogger(__name__)
 
-    cellid = 'gus037d-a2'
-    batch = 296
 
+    batch = 296
+    # TODO, how toe integrate my functions into one of these strings?
     modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
 
     autoPlot = False
@@ -53,16 +53,12 @@ def single_oddball_processing():
     # stim as point process
     xfspec.append(['oddball_xforms.stim_as_rasterized_point_process', {'scaling': 'same'}])
 
-    # estimation validation subsets
-    xfspec.append(['nems.xforms.use_all_data_for_est_and_val',
-                   {}])
-
     # define model architecture
     xfspec.append(['nems.xforms.init_from_keywords',
                    {'keywordstring': modelspecname, 'meta': meta}])
 
     # add fitter
-    xfspec += xhelp.generate_fitter_xfspec(fitkey)
+    xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
 
     # add metrics correlation
     xfspec.append(['nems.analysis.api.standard_correlation', {},
@@ -122,5 +118,5 @@ def single_oddball_processing():
 
     return modelspecs
 
-
-specs = single_oddball_processing()
+cellid = 'gus037d-a2'
+specs = single_oddball_processing(cellid)
