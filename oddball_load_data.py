@@ -1,5 +1,8 @@
-import nems_db.baphy as nb
+import nems_db.baphy as bd
+import nems_db.db as db
 import numpy as np
+import pandas as pd
+import math
 import re
 import os
 
@@ -40,17 +43,17 @@ def baphy_load_data(parmfilepath, **options):
     if parmfilepath[-2:] != ".m":
         parmfilepath += ".m"
     # load parameter file
-    globalparams, exptparams, exptevents = nb.baphy_parm_read(parmfilepath)
+    globalparams, exptparams, exptevents = bd.baphy_parm_read(parmfilepath)
 
     # TODO: use paths that match LBHB filesystem? new s3 filesystem?
     #       or make s3 match LBHB?
 
     # figure out stimulus cachefile to load
     if 'stim' in options.keys() and options['stim']:
-        stimfilepath = nb.baphy_stim_cachefile(exptparams, parmfilepath, **options)
+        stimfilepath = bd.baphy_stim_cachefile(exptparams, parmfilepath, **options)
         print("Cached stim: {0}".format(stimfilepath))
         # load stimulus spectrogram
-        stim, tags, stimparam = nb.baphy_load_specgram(stimfilepath)
+        stim, tags, stimparam = bd.baphy_load_specgram(stimfilepath)
 
         if options["stimfmt"]=='envelope' and \
             exptparams['TrialObject'][1]['ReferenceClass']=='SSA':
@@ -98,10 +101,10 @@ def baphy_load_data(parmfilepath, **options):
     print("Spike file: {0}".format(spkfilepath))
 
     # load spike times
-    sortinfo, spikefs = nb.baphy_load_spike_data_raw(spkfilepath)
+    sortinfo, spikefs = bd.baphy_load_spike_data_raw(spkfilepath)
 
     # adjust spike and event times to be in seconds since experiment started
-    exptevents, spiketimes, unit_names = nb.baphy_align_time(
+    exptevents, spiketimes, unit_names = bd.baphy_align_time(
             exptevents, sortinfo, spikefs, options['rasterfs']
             )
 
@@ -138,7 +141,7 @@ def baphy_load_data(parmfilepath, **options):
     if options['pupil']:
         try:
             pupilfilepath = re.sub(r"\.m$", ".pup.mat", parmfilepath)
-            pupiltrace, ptrialidx = nb.baphy_load_pupil_trace(
+            pupiltrace, ptrialidx = bd.baphy_load_pupil_trace(
                     pupilfilepath, exptevents, **options
                     )
             state_dict['pupiltrace'] = pupiltrace
@@ -149,9 +152,47 @@ def baphy_load_data(parmfilepath, **options):
     return (exptevents, stim, spike_dict, state_dict,
             tags, stimparam, exptparams)
 
+def get_batch_params():
+    # todo this is probably too slow and can be replaced with a smart sql querry...
+    # load the full db
+    parmfiles = db.get_batch_cell_data(batch=296, cellid=None, rawid=None, label=None)
+    # resets indexes for ease??
+    parmfiles = parmfiles.reset_index()
+
+    #iterates over every row and gets relevant data from the parmfile and
+    df = list()
+    for index, row in parmfiles.iterrows():
+        # row = next(parmfiles.iterrows())[1]
+        this_row = dict.fromkeys(['rawid', 'cellid', 'parmfile'])
+        this_row['rawid'] = row.rawid
+        this_row['cellid'] = row.cellid
+        this_row['parmfile'] = row.parm
+        parms = db.get_data_parms(rawid=this_row['rawid'])
+        # parses relevant data from the parms df
+        relevant = ['Ref_Frequencies', 'Ref_F1Rates', 'Ref_Jitter']
+        for rr in relevant:
+            # for backwards compatibility, checks if Ref_Jitter exists, asumes off if not
+            if rr == 'Ref_Jitter' and 'Ref_Jitter' not in parms.name.tolist():
+                this_row[rr] = 'Off'
+                continue
+            val = parms.loc[parms.name==rr, ['value']].values[0]
+            sval = parms.loc[parms.name==rr, ['svalue']].values[0][0]
+            # checks if the parameter value has string or number value.
+            if math.isnan(val) and sval is not None:
+                vv = sval
+            elif sval is None and not math.isnan(val):
+                vv = val
+            this_row[rr] = vv
+
+        df.append(this_row)
+
+    df =pd.DataFrame(df)
+
+    return df
+
+
 options = {'stimfmt': 'envelope', 'chancount': 0, 'rasterfs': 100, 'includeprestim': 1, 'runclass': 'SSA',
            'pertrial': 0, 'pupil': 0, 'pupil_deblink': 1, 'pupil_median': 1, 'stim': 1, 'cellid': 'gus037d-a2',
            'batch': 296, 'rawid': None}
-
 parmfilepath = '/auto/data/daq/Augustus/gus037/gus037d04_p_SSA.m'
 aaa = baphy_load_data(parmfilepath)

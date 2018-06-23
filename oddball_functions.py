@@ -4,6 +4,8 @@ import nems.epoch as ep
 import pandas as pd
 import nems.signal as signal
 import copy
+import nems_db.baphy as nb
+import nems_db.db as db
 
 # Functions working on signal objects
 
@@ -105,7 +107,83 @@ def set_signal_oddball_epochs(signal):
     return updated_signal
 
 
-def extract_signal_oddball_epochs(signal, sub_epoch):
+def get_superepoch_subset(signal, super_epoch):
+    # TODO implement
+    epochs = signal
+    # for every epoch that is not the super epoch, hold instancese where is contained within super_epoch
+    e_names = epochs.name.unique().tolist()
+    # checks if superepochs are within the singal epochs
+    sup_list = list()
+    for sup in super_epoch:
+        if sup not in super_epoch:
+            raise ValueError("super_epoch {} is not an epoch of the signal".format(sup))
+        # takes union of superepochs
+
+
+
+
+
+
+
+    e_dict = dict.fromkeys(e_names)
+
+    for name
+
+
+
+
+
+
+    new_epochs = None
+    return new_epochs
+
+
+
+def set_signal_jitte_epochs(signal):
+    '''
+    takes a signal from an ssa experiment, looks for epochs named after files, and renames those epochs
+    as Jitter On or Jitter Off. if no file is found, asumes Jitter Off
+    todo if not filename is found looks elsewere to make sure of Jitter status.
+    :param signal: a signal object from an oddball experiment
+    :return: the same signal object with epochs describing the Jitter status
+    '''
+
+    # regexp for experimetn name e.g. 'FILE_gus037d03_p_SSA' and 'FILE_gus037d04_p_SSA'
+    regexp = r"\AFILE_\D{3}\d{3}\D\d{2}_p_SSA"
+    epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
+    # TODO handle when there is no matching epochs. i.e. only one jitter status.
+    epoch_rename_map = dict.fromkeys(epoch_names_to_extract)
+    cellid = signal.recording
+
+    #related parmfiles
+    parmfiles = db.get_batch_cell_data(cellid=cellid, batch=296)
+    parmfiles = list(parmfiles['parm'])
+    # creates a dictionary mapping the epoch keys to the parmfiles paths, i.e.
+    # from: 'FILE_gus037d03_p_SSA' to: '/auto/data/daq/Augustus/gus037/gus037d03_p_SSA.m'
+    parmfiles = {'FILE_{}'.format(path.split('/',)[-1]):
+                 '{}.m'.format(path)
+                 for path in parmfiles}
+
+    jitter_status = list()
+    for oldkey, _  in epoch_rename_map.items():
+        # todo this thing takes a lot of time. It should be implemented when generating the recording/signal epochs.
+        globalparams, exptparams, exptevents = nb.baphy_parm_read(parmfiles[oldkey])
+
+        # convoluted indexin into hte nested dictionaryuies ot get Jitter status
+        j_stat = exptparams['TrialObject'][1]['ReferenceHandle'][1]['Jitter']
+        epoch_rename_map[oldkey] = 'Jitter_{}'.format(j_stat.rstrip())
+
+    # get epochs, rename as stated by the map
+    mod_epochs = signal.epochs.copy()
+    for oldkey, newkey in epoch_rename_map.items():
+        mod_epochs.loc[mod_epochs.name == oldkey, ['name']] = newkey
+
+    updated_signal = signal._modified_copy(signal._data, epochs=mod_epochs)
+
+    return updated_signal
+
+
+def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
     '''
     returns a dictionary of the data matching each element in the usual Oddball epochs.
 
@@ -115,6 +193,9 @@ def extract_signal_oddball_epochs(signal, sub_epoch):
     sub_epoch : None, str, list of str
         if none, returns the whole REFERENCE epoch, otherwise returns the "sub epoch" contained within REFERENCE
         it should be 'Stim', 'PreStimSilence' or 'PostStimSilence'
+    super_epoch: None, str, list of str
+        if none, returns  all REFERENCE possibel, otherwise returns REFERENCES(or sub epochs) contained within super_epoch
+        ussually it should be 'Jitter_ON' or 'Jitter_Off'
 
     Returns
     -------
@@ -381,6 +462,11 @@ def get_recording_activity(recording, sub_epoch, baseline='silence'):
                  signals.items() if sig_key in relevant_keys}
 
     return resp_dict
+
+# data base interfacing functions
+
+def get_oddball_parmfiles(cellid):
+    parmfiles = db.get_batch_cell_data(batch=296, cellid=cellid, rawid=None, label=None)
 
 #### graveyard ####
 

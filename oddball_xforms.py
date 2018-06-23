@@ -8,12 +8,10 @@ def stim_as_rasterized_point_process(rec, scaling, **context):
     return {'rec': rec}
 
 def calculate_oddball_metrics(val, modelspecs, sub_epoch, baseline, **context):
-    # this thing should get the specific recordings from which i wanna calculate SI and activity of the validation
-    # dataset
+    # calculates SSA index and activity index for the validatio. asumes unique validation recording.
+    if len(val) != 1:
+        raise Warning("multiple val recordings, usign the first. Inverse jackknife if recomended before this step")
 
-    # the val in the ctx is a list of recordings, probably each of the validation subsets when doing jackknife multiple
-    # evaluatio validation
-    # TODO work the data flow for jackknifed data.
     val = val[0]
 
     # update modelspecs with the adecuate metadata,
@@ -23,6 +21,12 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, baseline, **context):
     modelspecs[0][0]['meta']['activity'] = RA
 
     return modelspecs
+
+def calculate_oddball_metrics_by_jitter(val, modelspecs, sub_epoch, baseline, **context):
+    # this
+
+
+    return None
 
 
 '''

@@ -175,7 +175,7 @@ def loader():
     # tests a string of xfspecs containing some default loading xpforms and custom made oddball_xpforms
 
     cellid = 'gus016c-a2'  # this cell is not working for some reason
-    # cellid = 'gus037d-a2' # this cell is not in the old list of good cells, but it works
+    cellid = 'gus037d-a1' # this cell is not in the old list of good cells, but it works
     batch = 296
     modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
 
@@ -202,10 +202,6 @@ def loader():
     normalize = False
     xfspec.append(['nems.xforms.load_recordings',
                    {'recording_uri_list': recordings, 'normalize': normalize}])
-
-    # estimation validation subsets
-    xfspec.append(['nems.xforms.use_all_data_for_est_and_val',
-                   {}])
 
     ctx = {}
     for xfa in xfspec:
@@ -430,23 +426,20 @@ def nan_issue():
 
 
 def baphy_load():
-    cellid = 'gus037d-a2'
+    cellid = 'gus037d-a1'
+    batch = 296
     options = {}
     options["stimfmt"] = "envelope"
     options["chancount"] = 0
     options["rasterfs"] = 100
     options['includeprestim'] = 1
     options['runclass'] = 'SSA'
-    # TODO figure out how this is pulling the data for SSA jitter on and jitter off files.
-
-    rec = nb.baphy_load_recording(cellid, 296, **options)
+    rec = nb.baphy_load_recording(cellid, batch, **options)
     return rec
 
 
-def batch_cell():
-    options = {'rasterfs': 100, 'stimfmt': 'envelope', 'chancount': 0, 'recache': 0, 'pertrial': 0,
-               'includeprestim': 1, 'pupil': 0, 'pupil_deblink': 1, 'pupil_median': 1, 'stim': 1,
-               'runclass': None, 'cellid': 'gus016c-a2', 'batch': 296, 'rawid': None}
-    d = db.get_batch_cell_data(batch=296, cellid='gus016c-a2', label='parm',
-                               rawid=options['rawid'])
-    return d
+"""
+right now i need to figure out the difference in loading between baphy_load() and loader(). the former adds epochs
+corresponding to the different files being concatenated i.e. Jitter On and Jitter Off experimetns. The later deals with 
+a bunch of NANs in the stimulu and is faster (cached?). but it lacks the epochs corespondign to jitte status.
+"""
