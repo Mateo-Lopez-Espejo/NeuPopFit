@@ -98,6 +98,18 @@ def set_signal_oddball_epochs():
     return odd_sig
 
 
+def get_superepoch_subset():
+    ctx = test_ctx = jl.load(test_ctx_file_path)
+    rec = test_ctx['val'][0]
+    sig = rec['resp']
+    sig.add_epoch('test_epoch_1', np.array([[0, 101]]))
+    sig.add_epoch('test_epoch_2', np.array([[100, 201]]))
+    sig.add_epoch('test_epoch_3', np.array([[200, 300]]))
+    epochs = sig.epochs
+    newepochs =of.get_superepoch_subset(sig, ['test_epoch_1', 'test_epoch_2', 'test_epoch_3'])
+    return epochs, newepochs
+
+
 def get_signal_SI():
     test_ctx = jl.load(test_ctx_file_path)
     rec = test_ctx['val'][0]
@@ -171,7 +183,7 @@ def preprocess():
     return ctx
 
 
-def loader():
+def xform_load():
     # tests a string of xfspecs containing some default loading xpforms and custom made oddball_xpforms
 
     cellid = 'gus016c-a2'  # this cell is not working for some reason
@@ -202,12 +214,26 @@ def loader():
     normalize = False
     xfspec.append(['nems.xforms.load_recordings',
                    {'recording_uri_list': recordings, 'normalize': normalize}])
+    # this is ultimately calling nems.recording.load_recording_from_targz(targz)
 
     ctx = {}
     for xfa in xfspec:
         ctx = xforms.evaluate_step(xfa, ctx)
 
     return ctx
+
+
+def baphy_load():
+    cellid = 'gus037d-a1'
+    batch = 296
+    options = {}
+    options["stimfmt"] = "envelope"
+    options["chancount"] = 0
+    options["rasterfs"] = 100
+    options['includeprestim'] = 1
+    options['runclass'] = 'SSA'
+    rec = nb.baphy_load_recording(cellid, batch, **options)
+    return rec
 
 
 def oddball_full_analysis():
@@ -424,8 +450,8 @@ def nan_issue():
                 ax.set_title(recname)
     return ctx, ctx_ls
 
-
-def baphy_load():
+def oddball_format():
+    # load the file
     cellid = 'gus037d-a1'
     batch = 296
     options = {}
@@ -435,11 +461,27 @@ def baphy_load():
     options['includeprestim'] = 1
     options['runclass'] = 'SSA'
     rec = nb.baphy_load_recording(cellid, batch, **options)
-    return rec
+
+    rec['resp'] = rec['resp'].rasterize()
+    rec['stim'] = rec['stim'].rasterize()
+    # sets stim as onset with amplitu ecual as maximum value of original stim
+    rec = of.as_rasterized_point_process(rec, scaling='same')
+    # changes Nan values in to zero for the 'stim' signal
+    rec = of.recording_nan_as_zero(rec, ['stim'])
+    # set epochs of Jitter On and Jitter Off
+    rec = of.set_recording_jitter_epochs(rec)
+    # set oddball epochs
+    rec = of.set_recording_oddball_epochs(rec)
+    return {'rec': rec}
+
+
+
+
+
 
 
 """
-right now i need to figure out the difference in loading between baphy_load() and loader(). the former adds epochs
+right now i need to figure out the difference in loading between baphy_load() and xform_load(). the former adds epochs
 corresponding to the different files being concatenated i.e. Jitter On and Jitter Off experimetns. The later deals with 
 a bunch of NANs in the stimulu and is faster (cached?). but it lacks the epochs corespondign to jitte status.
 """

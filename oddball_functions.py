@@ -7,6 +7,7 @@ import copy
 import nems_db.baphy as nb
 import nems_db.db as db
 
+
 # Functions working on signal objects
 
 def set_signal_oddball_epochs(signal):
@@ -23,6 +24,14 @@ def set_signal_oddball_epochs(signal):
     -------
     copy of the signal with renamed epochs and new sound epoch
     '''
+
+    # checks if the signal already has oddball epochs
+    oddball_epochs_names = set(['f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev'])
+    signal_epochs_names = set(signal.epochs.name.unique())
+    if oddball_epochs_names.issubset(signal_epochs_names):
+        return signal
+    else:
+        pass
 
     # regular expression to match either SubStim or STIM tags inlcuding sound frequency and rate or ONSET
     # e.g. "STIM_25000+ONSET" or "STIM_17500+0.05" or "SUBSTIM_17500+0.05"
@@ -100,87 +109,136 @@ def set_signal_oddball_epochs(signal):
     oddball_epochs.sort_values(by=['start', 'end'], ascending=[True, False], inplace=True)
     oddball_epochs.reset_index(drop=True, inplace=True)
 
-    # updates epochs in form original signal into new signal
-    updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
+    # updates epochs in form original signal into a copy
+    new_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
 
-    # something is not working with the epoch_intersection method
-    return updated_signal
+    return new_signal
 
 
 def get_superepoch_subset(signal, super_epoch):
-    # TODO implement
-    epochs = signal
-    # for every epoch that is not the super epoch, hold instancese where is contained within super_epoch
+    '''
+    returns a copy of the signal only with epochs contained entirely by super_epoch. i.e. an intersection of every epoch
+    with super_epoch
+
+    :param signal: A signal object from an oddball experiment, preferably after defining the oddbal subepochs with
+                   set_signal_oddball_epochs()
+    :param super_epoch: None, str or [str,...] with the name/names of the epochs
+    :return: a epoch data frame
+    '''
+    # checks format of super_epoch
+    if isinstance(super_epoch, str):
+        super_epoch = [super_epoch]
+    elif isinstance(super_epoch, list):
+        pass
+    elif super_epoch == None:
+        # if empty list, asume no super_epochs desired and returns original signal epochs
+        return signal.epochs
+    else:
+        raise ValueError('super_epochs must be a strig, list of strings or empty list')
+
+    epochs = signal.epochs
     e_names = epochs.name.unique().tolist()
-    # checks if superepochs are within the singal epochs
-    sup_list = list()
+
     for sup in super_epoch:
-        if sup not in super_epoch:
+        # checks if superepochs are within the signal epochs
+        if sup not in e_names:
             raise ValueError("super_epoch {} is not an epoch of the signal".format(sup))
-        # takes union of superepochs
 
+    # get the equivalent np array of the specified 2D array of (M x 2), holds in dict to add later
+    superepoch_dict = {sup: epochs.loc[epochs.name == sup, ['start', 'end']].values
+                       for sup in super_epoch}
 
+    # as a list for easier epoch union
+    superepoch_list = [val for key, val in superepoch_dict.items()]
 
+    # iteratively takes the union of all the superepochs
+    while len(superepoch_list) >= 2:
+        try:
+            a = superepoch_list.pop()
+            b = superepoch_list.pop()
+            c = ep.epoch_union(a, b)
+            superepoch_list.append(c)
+        except IndexError:
+            print('this message should never show')
+            break
+    super_epoch_union = superepoch_list[0]  # this should be a single item list
 
+    # iterates over every other epoch that is not a super_epoch
+    # and gets the intersection, storing in the dictionary under the same name
+    e_names = dict.fromkeys([name for name in e_names if name not in sup])
+    contained_epochs = {
+    key: ep.epoch_intersection(epochs.loc[epochs.name == key, ['start', 'end']].values, super_epoch_union)
+    for key, val in e_names.items()}
 
+    # add the epochs corresponding to super_epoch
+    cont_sup_epochs = {**contained_epochs, **superepoch_dict}
 
+    # takes the arrays and key names and organize in an epoch dataframe
+    new_epochs_list = list()
 
-    e_dict = dict.fromkeys(e_names)
+    for name, arr in cont_sup_epochs.items():
+        cont_epoch = pd.DataFrame({
+            'name': name,
+            'start': arr[:, 0],
+            'end': arr[:, 1]})
 
-    for name
+        new_epochs_list.append(cont_epoch)
+    # concatenates all dataframes together
+    new_epochs = pd.concat(new_epochs_list)
 
-
-
-
-
-
-    new_epochs = None
+    # formats the dataframe: indexes, order by start time and a order columns for better readability
+    new_epochs.sort_values(by=['start', 'end'], ascending=[True, False], inplace=True)
+    new_epochs.reset_index(drop=True, inplace=True)
+    new_epochs = new_epochs[['start', 'end', 'name']]
+    # TODO, figure out why longer epochs like PASSIVE_EXPERIMET are being broken down into shorter pieces when usign TRIAL as a superepoch.
     return new_epochs
 
 
-
-def set_signal_jitte_epochs(signal):
+def set_signal_jitter_epochs(signal):
     '''
     takes a signal from an ssa experiment, looks for epochs named after files, and renames those epochs
     as Jitter On or Jitter Off. if no file is found, asumes Jitter Off
     todo if not filename is found looks elsewere to make sure of Jitter status.
     :param signal: a signal object from an oddball experiment
-    :return: the same signal object with epochs describing the Jitter status
+    :return: a copy of the signal object with epochs describing the Jitter status
     '''
 
     # regexp for experimetn name e.g. 'FILE_gus037d03_p_SSA' and 'FILE_gus037d04_p_SSA'
     regexp = r"\AFILE_\D{3}\d{3}\D\d{2}_p_SSA"
     epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
-    # TODO handle when there is no matching epochs. i.e. only one jitter status.
+    if not epoch_names_to_extract:
+        raise ValueError('no epochs coresponding to file names')
+        # TODO handle when there is no matching epochs. i.e. only one jitter status.
+
     epoch_rename_map = dict.fromkeys(epoch_names_to_extract)
     cellid = signal.recording
 
-    #related parmfiles
+    # related parmfiles
     parmfiles = db.get_batch_cell_data(cellid=cellid, batch=296)
     parmfiles = list(parmfiles['parm'])
     # creates a dictionary mapping the epoch keys to the parmfiles paths, i.e.
     # from: 'FILE_gus037d03_p_SSA' to: '/auto/data/daq/Augustus/gus037/gus037d03_p_SSA.m'
-    parmfiles = {'FILE_{}'.format(path.split('/',)[-1]):
-                 '{}.m'.format(path)
+    parmfiles = {'FILE_{}'.format(path.split('/', )[-1]):
+                     '{}.m'.format(path)
                  for path in parmfiles}
 
     jitter_status = list()
-    for oldkey, _  in epoch_rename_map.items():
+    for oldkey, _ in epoch_rename_map.items():
         # todo this thing takes a lot of time. It should be implemented when generating the recording/signal epochs.
         globalparams, exptparams, exptevents = nb.baphy_parm_read(parmfiles[oldkey])
 
-        # convoluted indexin into hte nested dictionaryuies ot get Jitter status
+        # convoluted indexig into the nested dictionaries ot get Jitter status
         j_stat = exptparams['TrialObject'][1]['ReferenceHandle'][1]['Jitter']
         epoch_rename_map[oldkey] = 'Jitter_{}'.format(j_stat.rstrip())
 
     # get epochs, rename as stated by the map
-    mod_epochs = signal.epochs.copy()
+    new_epochs = signal.epochs.copy()
     for oldkey, newkey in epoch_rename_map.items():
-        mod_epochs.loc[mod_epochs.name == oldkey, ['name']] = newkey
+        new_epochs.loc[new_epochs.name == oldkey, ['name']] = newkey
 
-    updated_signal = signal._modified_copy(signal._data, epochs=mod_epochs)
+    new_signal = signal._modified_copy(signal._data, epochs=new_epochs)
 
-    return updated_signal
+    return new_signal
 
 
 def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
@@ -209,6 +267,10 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
     oddball_signal = set_signal_oddball_epochs(signal)
     oddball_epoch_names = ['f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev']
     sub_epochs_names = ['PreStimSilence', 'PostStimSilence', 'Stim']
+
+    # select subset of epochs contained in super_epoch
+    super_epoch_subset = get_superepoch_subset(oddball_signal, super_epoch=super_epoch)
+    oddball_signal = oddball_signal._modified_copy(oddball_signal._data, epochs=super_epoch_subset)
 
     # extract either one subepochs or multiple subepochs and concatenates\
     if isinstance(sub_epoch, list):
@@ -242,7 +304,7 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
     return folded_signal
 
 
-def get_signal_SI(signal, sub_epoch):
+def get_signal_SI(signal, sub_epoch, super_epoch):
     '''
         Given the recording from an SSA object, returns the SSA index (SI) as defined by Ulanovsky et al (2003)
 
@@ -262,7 +324,7 @@ def get_signal_SI(signal, sub_epoch):
 
         '''
 
-    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch)
+    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch, super_epoch=super_epoch)
 
     # calculates PSTH
     PSTHs = {oddball_epoch_name: np.squeeze(np.nanmean(epoch_data, axis=0))
@@ -291,7 +353,7 @@ def get_signal_SI(signal, sub_epoch):
     return SSA_index_dict
 
 
-def get_signal_activity(signal, sub_epoch, baseline='silence', metric='z_score'):
+def get_signal_activity(signal, sub_epoch, super_epoch, baseline='silence', metric='z_score'):
     '''
     given a signal object, usually from an oddball experiment, determines the responsiveness of the neuron to
     the different sound types in the oddball context,
@@ -334,7 +396,7 @@ def get_signal_activity(signal, sub_epoch, baseline='silence', metric='z_score')
     epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
 
     # concatenates all sound types (onse, std, dev) by their frequency
-    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch)
+    folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch, super_epoch=super_epoch)
     pooled_by_freq = dict.fromkeys(['f1', 'f2'])
     for key in pooled_by_freq.keys():
         pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
@@ -352,6 +414,20 @@ def get_signal_activity(signal, sub_epoch, baseline='silence', metric='z_score')
                              for frequency, z in z_scores.items()}
 
     return mean_significant_bins
+
+
+def signal_nan_as_zero(signal):
+    '''
+    takes any signal object (RasterizedSignal, TiledSignal) and returns an equivalent signal
+    where NAN has been replaced with zeros.
+    :param signal: a signal object
+    :return: a copy of the input signal object sans NaNs
+    '''
+    arr = signal.rasterize().as_continuous().copy()
+    nan_mask = np.isnan(arr)
+    arr[nan_mask] = 0
+    no_nan_signal = signal.rasterize()._modified_copy(arr)
+    return no_nan_signal
 
 
 # functions working on recordings objects
@@ -431,7 +507,7 @@ def as_rasterized_point_process(recording, scaling):
     return recording
 
 
-def get_recording_SI(recording, sub_epoch):
+def get_recording_SI(recording, sub_epoch, super_epoch):
     signals = recording.signals
 
     # for SI calculates only for resp and pred, checks if both signals are in the recording
@@ -442,13 +518,13 @@ def get_recording_SI(recording, sub_epoch):
         raise ValueError("The recording does not have 'resp' and 'pred' signals")
 
     # TODO,  this is raising and exception as a whole, but not when run one by one....
-    SI_dict = {sig_key: get_signal_SI(signal, sub_epoch) for sig_key, signal in signals.items() if
+    SI_dict = {sig_key: get_signal_SI(signal, sub_epoch, super_epoch) for sig_key, signal in signals.items() if
                sig_key in relevant_keys}
 
     return SI_dict
 
 
-def get_recording_activity(recording, sub_epoch, baseline='silence'):
+def get_recording_activity(recording, sub_epoch, super_epoch, baseline='silence'):
     signals = recording.signals
 
     # for activity calculates only for resp and pred, checks if both signals are in the recording
@@ -458,435 +534,64 @@ def get_recording_activity(recording, sub_epoch, baseline='silence'):
     else:
         raise ValueError("The recording does not have 'resp' and 'pred' signals")
 
-    resp_dict = {sig_key: get_signal_activity(signal, sub_epoch, baseline=baseline) for sig_key, signal in
+    resp_dict = {sig_key: get_signal_activity(signal, sub_epoch, super_epoch, baseline=baseline) for sig_key, signal in
                  signals.items() if sig_key in relevant_keys}
 
     return resp_dict
+
+
+def recording_nan_as_zero(recording, signals_subset=['stim']):
+    '''
+    for a given recordign, takes the signals of that recordign specified by signals_subset, and sets the nan values to
+    zero, if signal subset is an empty list, performs the operation for all the signals in the recording.
+    :param recording: a recording object
+    :param signals_subset: an empty list of list of strings corresponding to the names of signals in the recording
+    :return: a copy of the recording with modified signals
+    '''
+    if isinstance(signals_subset, str):
+        signals_subset = [signals_subset]
+    elif signals_subset == None:
+        signals_subset = list(recording.signals.keys())
+    elif isinstance(signals_subset, list):
+        pass
+    else:
+        return ValueError("'signals_subset must be str, [str,...] or None")
+
+    new_recording = recording.copy()
+
+    for select_sig in signals_subset:
+        if not isinstance(select_sig, str):
+            raise ValueError("signal_subset must be a list of strings")
+        elif select_sig not in recording.signals.keys():
+            raise ValueError("{} is not a signal of the recording".format(select_sig))
+        else:
+            pass
+
+        signal = new_recording[select_sig]
+        new_signal = signal_nan_as_zero(signal)
+        new_signal.name = select_sig
+        new_recording.add_signal(new_signal)
+
+    return new_recording
+
+
+def set_recording_jitter_epochs(recording):
+    new_recording = recording.copy()
+    for name, signal in recording.signals.items():
+        new_signal = set_signal_jitter_epochs(signal)
+        new_recording[name] = new_signal
+    return new_recording
+
+
+def set_recording_oddball_epochs(recording):
+    new_recording = recording.copy()
+    for name, signal in recording.signals.items():
+        new_signal = set_signal_oddball_epochs(signal)
+        new_recording[name] = new_signal
+    return new_recording
+
 
 # data base interfacing functions
 
 def get_oddball_parmfiles(cellid):
     parmfiles = db.get_batch_cell_data(batch=296, cellid=cellid, rawid=None, label=None)
-
-#### graveyard ####
-
-def SSA_index(recording, subset='resp', return_clasified_responses=False):
-    '''
-    Given the recording from an SSA object, returns the SSA index (SI) as defined by Ulanovsky et al (2003)
-
-
-    Parameters
-    ----------
-    recording : A Recording object
-        Generally the output of `model.evaluate(phi, data)`??
-    subset : string ['resp' or 'pred']
-        Name of the subset of data from which to calculate the SI,
-        either the response 'resp' or prediction 'pred'
-
-    Returns
-    -------
-    SSA_index_dict : dict
-        Dictionary containing the SI values for each of the sound frequency channels and independent of frequency
-
-    '''
-
-    if subset not in ['resp', 'pred']:
-        raise ValueError("subset has to be 'resp' or 'pred'")
-
-    working_signal = recording.get_signal(subset)
-
-    if not isinstance(working_signal, signal.RasterizedSignal):
-        raise ValueError('{} is not a RasterizedSignal'.format(subset))
-
-    if working_signal.shape[0] > 1:
-        raise NotImplementedError('multi-channel signals not supported yet')
-
-    # TODO implemetne oddball clasification as an independent function
-    # gets the clasiffied responses
-
-    # extract relevant epochs
-    # regular expression to match either SubStim or STIM tags inlcuding sound frequency and rate or ONSET
-    # e.g. "STIM_25000+ONSET" or "STIM_17500+0.05" or "SUBSTIM_17500+0.05"
-    # todo check if the new Oddball implementation tags are being paresed capitalized or not (ask Stephen)
-    regexp = r"((SubStim)|(STIM))_\d*\+((0\.\d*)|ONSET)"
-
-    epoch_names_to_extract = ep.epoch_names_matching(working_signal.epochs, regexp)
-
-    # defines deviant standard and onset for each sound frequency,
-    # maps the epoch tags into dictionary with keys generalized for oddball stimuli
-    center_frequencies = {float(name.split('_')[1].split('+')[0]) for name in epoch_names_to_extract}
-    standard_deviant_rates = {name.split('_')[1].split('+')[1] for name in epoch_names_to_extract}
-    standard_deviant_rates.remove('ONSET')
-    standard_deviant_rates = {float(rate) for rate in standard_deviant_rates}
-
-    prefix = epoch_names_to_extract[0].split('_')[0]  # STIM or PreStim
-
-    # explicit statement of dict key to event tag mapping
-    sound_types = {'f1_onset': '{}_{:.0f}+{}'.format(prefix, min(center_frequencies), 'ONSET'),
-                   'f1_std': '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), max(standard_deviant_rates)),
-                   'f1_dev': '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), min(standard_deviant_rates)),
-                   'f2_onset': '{}_{:.0f}+{}'.format(prefix, max(center_frequencies), 'ONSET'),
-                   'f2_std': '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), max(standard_deviant_rates)),
-                   'f2_dev': '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), min(standard_deviant_rates))}
-
-    # Fold each group and organizes in dictionary
-    folded_sounds = {sound_type: working_signal.extract_epoch(epoch_tag) for sound_type, epoch_tag in
-                     sound_types.items()}
-
-    if return_clasified_responses == True:
-        return folded_sounds
-    elif return_clasified_responses == False:
-        pass
-    else:
-        raise ValueError("return_clasified_ressonse sould be boolean")
-
-    # calculates average response, i.e. PSTH
-    avg_resp = {sound_type: np.nanmean(np.squeeze(folded_sound), axis=0)
-                for sound_type, folded_sound in folded_sounds.items()}
-
-    # selects the time window in which to calculate the SSA index, e.g. only during the sound presentation
-    # this value is not explicint in the epochs, rather is necesary to take the difference between a whole
-    # REFERENCE and the Pre and PostStimSilences
-    eps = working_signal.epochs
-    fs = working_signal.fs
-    epoch_tags = ['REFERENCE', 'PreStimSilence', 'PostStimSilence']
-
-    example_epoch_dict = dict.fromkeys(epoch_tags)
-    for et in epoch_tags:
-        example_epoch = eps.loc[eps['name'] == et, ['start', 'end']].iloc[0, :]
-        epoc_sample_len = int(np.round((example_epoch.end - example_epoch.start) * fs, decimals=0))
-        example_epoch_dict[et] = epoc_sample_len
-
-    SI_window = [example_epoch_dict['PreStimSilence'],  # end of the PreStimSilence
-                 example_epoch_dict['REFERENCE'] - example_epoch_dict[
-                     'PostStimSilence']]  # start of the PostStimSilence
-
-    windowed_resp = {sound_type: psth[SI_window[0]: SI_window[1]] for sound_type, psth in avg_resp.items()}
-
-    # integrates values across time
-    integrated_resp = {sound_type: np.sum(win_resp) for sound_type, win_resp in windowed_resp.items()}
-
-    # calculates different version of SSA index (SI)
-    SSA_index_dict = dict.fromkeys(['f1', 'f2', 'cell'])
-
-    for key, val in SSA_index_dict.items():
-        # single frequencies SI
-        if key in ['f1', 'f2']:
-            std_key = '{}_{}'.format(key, 'std')
-            dev_key = '{}_{}'.format(key, 'dev')
-            SSA_index_dict[key] = ((integrated_resp[dev_key] - integrated_resp[std_key]) /
-                                   (integrated_resp[dev_key] + integrated_resp[std_key]))
-        # Full cell SI
-        elif key == 'cell':
-            SSA_index_dict[key] = ((integrated_resp['f1_dev'] + integrated_resp['f2_dev'] -
-                                    integrated_resp['f1_std'] - integrated_resp['f2_std']) /
-                                   (integrated_resp['f1_dev'] + integrated_resp['f2_dev'] +
-                                    integrated_resp['f1_std'] + integrated_resp['f2_std']))
-
-    return SSA_index_dict
-
-
-def set_signal_oddball_epochs_v2(signal):
-    # this is slow as shit!
-
-    '''
-    rename the signal epochs to a form generalized for oddball stimulus.
-    i.e. (onset, standard, deviant) * (frequency 1, frequency 6).
-    Adds a sound epoch in between the PreStimSilence and PostStimSilence
-
-    Parameters
-    ----------
-    signal: a signal object
-
-    Returns
-    -------
-    copy of the signal with renamed epochs and new sound epoch
-    '''
-
-    # regular expression to match either SubStim or STIM tags inlcuding sound frequency and rate or ONSET
-    # e.g. "STIM_25000+ONSET" or "STIM_17500+0.05" or "SUBSTIM_17500+0.05"
-    regexp = r"((SubStim)|(STIM))_\d*\+((0\.\d*)|ONSET)"
-
-    epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
-
-    # defines deviant standard and onset for each sound frequency,
-    # "STIM_25000+ONSET"
-    #  ^1   ^2    ^3     1: prefix, 2: center_frequencie, 3: standard_deviant_rates
-    center_frequencies = {float(name.split('_')[1].split('+')[0]) for name in epoch_names_to_extract}
-    standard_deviant_rates = {name.split('_')[1].split('+')[1] for name in epoch_names_to_extract}
-    standard_deviant_rates.remove('ONSET')
-    standard_deviant_rates = {float(rate) for rate in standard_deviant_rates}
-    prefix = epoch_names_to_extract[0].split('_')[0]  # STIM or PreStim
-
-    # Checks the input signal has the adecuates frequencies and rates dimentions
-    if (len(standard_deviant_rates) != 2) or (len(center_frequencies) != 2):
-        raise ValueError("epochs contain {} presetnations rates, 2 are required\n"
-                         "epochs contain {} center frequencies, 2 are required".format(len(standard_deviant_rates),
-                                                                                       len(center_frequencies)))
-
-    # explicit statement of dict key to event tag mapping
-    key_mapping = {'{}_{:.0f}+{}'.format(prefix, min(center_frequencies), 'ONSET'): 'f1_onset',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), max(standard_deviant_rates)): 'f1_std',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), min(standard_deviant_rates)): 'f1_dev',
-                   '{}_{:.0f}+{}'.format(prefix, max(center_frequencies), 'ONSET'): 'f2_onset',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), max(standard_deviant_rates)): 'f2_std',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), min(standard_deviant_rates)): 'f2_dev'}
-
-    # creates new event dataframe with modified epoch names
-    oddball_epochs = copy.deepcopy(signal.epochs)
-    for oldkey, newkey in key_mapping.items():
-        oddball_epochs.name.replace(oldkey, newkey, inplace=True)
-
-    # Using the epochs DF, interates over every oddball_ epoch.
-    PreStim_mask = oddball_epochs.name == 'PreStimSilence'
-    PostStim_mask = oddball_epochs.name == 'PostStimSilence'
-
-    for _, oddball_key in key_mapping.items():
-        epoch_mask = oddball_epochs.name == oddball_key
-        current_epochs = oddball_epochs.loc[epoch_mask, :]
-
-        for ii, this_oddball in current_epochs.iterrows():
-            # get start time and end time and checks what PreStimSilence and PostStimSilence are contained
-            start_mask = oddball_epochs.start >= this_oddball.start
-            end_mask = oddball_epochs.end <= this_oddball.end
-            contained_epochs = oddball_epochs.loc[start_mask & end_mask, :]
-            # extract contained Pre and Post StimSilence
-            PreStim_epoch = oddball_epochs.loc[start_mask & end_mask & PreStim_mask, :].iloc[0, :]
-            PostStim_epoch = oddball_epochs.loc[start_mask & end_mask & PostStim_mask, :].iloc[0, :]
-            # Modify name and append copy
-            for silence in [PreStim_epoch, PostStim_epoch]:
-                compound_name = '{}_{}'.format(this_oddball['name'], silence['name'])
-                renamed_subepoch = pd.Series([silence.start, silence.end, compound_name],
-                                             ['start', 'end', 'name'])
-                oddball_epochs = oddball_epochs.append(renamed_subepoch, ignore_index=True, verify_integrity=False)
-
-            new_stim_name = '{}_Stim'.format(this_oddball['name'])
-            new_Stim = pd.Series([PreStim_epoch.end, PostStim_epoch.start, new_stim_name],
-                                 ['start', 'end', 'name'])
-            oddball_epochs = oddball_epochs.append(new_Stim, ignore_index=True, verify_integrity=False)
-
-    oddball_epochs.sort_values(by=['start', 'end'], ascending=[True, False], inplace=True)
-    oddball_epochs.reset_index(drop=True, inplace=True)
-
-    # updates epochs in form original signal into new signal
-    updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
-
-    # something is not working with the epoch_intersection method
-    return updated_signal
-
-
-def set_signal_oddball_epochs_v3(signal):
-    '''
-    rename the signal epochs to a form generalized for oddball stimulus.
-    i.e. (onset, standard, deviant) * (frequency 1, frequency 6).
-    Adds a sound epoch in between the PreStimSilence and PostStimSilence
-
-    Parameters
-    ----------
-    signal: a signal object
-
-    Returns
-    -------
-    copy of the signal with renamed epochs and new sound epoch
-    '''
-
-    # regular expression to match either SubStim or STIM tags inlcuding sound frequency and rate or ONSET
-    # e.g. "STIM_25000+ONSET" or "STIM_17500+0.05" or "SUBSTIM_17500+0.05"
-    regexp = r"((SubStim)|(STIM))_\d*\+((0\.\d*)|ONSET)"
-
-    epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
-
-    # defines deviant standard and onset for each sound frequency,
-    # "STIM_25000+ONSET"
-    #  ^1   ^2    ^3     1: prefix, 2: center_frequencie, 3: standard_deviant_rates
-    center_frequencies = {float(name.split('_')[1].split('+')[0]) for name in epoch_names_to_extract}
-    standard_deviant_rates = {name.split('_')[1].split('+')[1] for name in epoch_names_to_extract}
-    standard_deviant_rates.remove('ONSET')
-    standard_deviant_rates = {float(rate) for rate in standard_deviant_rates}
-    prefix = epoch_names_to_extract[0].split('_')[0]  # STIM or PreStim
-
-    # Checks the input signal has the adecuates frequencies and rates dimentions
-    if (len(standard_deviant_rates) != 2) or (len(center_frequencies) != 2):
-        raise ValueError("epochs contain {} presetnations rates, 2 are required\n"
-                         "epochs contain {} center frequencies, 2 are required".format(len(standard_deviant_rates),
-                                                                                       len(center_frequencies)))
-
-    # explicit statement of dict key to event tag mapping
-    key_mapping = {'{}_{:.0f}+{}'.format(prefix, min(center_frequencies), 'ONSET'): 'f1_onset',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), max(standard_deviant_rates)): 'f1_std',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, min(center_frequencies), min(standard_deviant_rates)): 'f1_dev',
-                   '{}_{:.0f}+{}'.format(prefix, max(center_frequencies), 'ONSET'): 'f2_onset',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), max(standard_deviant_rates)): 'f2_std',
-                   '{}_{:.0f}+{:.2f}'.format(prefix, max(center_frequencies), min(standard_deviant_rates)): 'f2_dev'}
-
-    # creates new event dataframe with modified epoch names
-    oddball_epochs = copy.deepcopy(signal.epochs)
-    for oldkey, newkey in key_mapping.items():
-        oddball_epochs.name.replace(oldkey, newkey, inplace=True)
-
-    # Using the epochs DF, interates over every oddball_ epoch.
-    PreStim_mask = oddball_epochs.name == 'PreStimSilence'
-    PostStim_mask = oddball_epochs.name == 'PostStimSilence'
-
-    for _, oddball_key in key_mapping.items():
-        epoch_mask = oddball_epochs.name == oddball_key
-        current_epochs = oddball_epochs.loc[epoch_mask, :]
-
-        for ii, this_oddball in current_epochs.iterrows():
-            # get start time and end time and checks what PreStimSilence and PostStimSilence are contained
-            start_mask = oddball_epochs.start >= this_oddball.start
-            end_mask = oddball_epochs.end <= this_oddball.end
-            contained_epochs = oddball_epochs.loc[start_mask & end_mask, :]
-            # extract contained Pre and Post StimSilence
-            PreStim_epoch = oddball_epochs.loc[start_mask & end_mask & PreStim_mask, :].iloc[0, :]
-            PostStim_epoch = oddball_epochs.loc[start_mask & end_mask & PostStim_mask, :].iloc[0, :]
-            # Modify name and append copy
-            for silence in [PreStim_epoch, PostStim_epoch]:
-                compound_name = '{}_{}'.format(this_oddball['name'], silence['name'])
-                renamed_subepoch = pd.Series([silence.start, silence.end, compound_name],
-                                             ['start', 'end', 'name'])
-                oddball_epochs = oddball_epochs.append(renamed_subepoch, ignore_index=True, verify_integrity=False)
-
-            new_stim_name = '{}_Stim'.format(this_oddball['name'])
-            new_Stim = pd.Series([PreStim_epoch.end, PostStim_epoch.start, new_stim_name],
-                                 ['start', 'end', 'name'])
-            oddball_epochs = oddball_epochs.append(new_Stim, ignore_index=True, verify_integrity=False)
-
-    oddball_epochs.sort_values(by=['start', 'end'], ascending=[True, False], inplace=True)
-    oddball_epochs.reset_index(drop=True, inplace=True)
-
-    # updates epochs in form original signal into new signal
-    updated_signal = signal._modified_copy(signal._data, epochs=oddball_epochs)
-
-    # something is not working with the epoch_intersection method
-    return updated_signal
-
-
-def epoch_intersection(a, b):
-    '''
-    Compute the intersection of the epochs. Only regions in a which overlap with
-    b will be kept.
-
-    Parameters
-    ----------
-    a : 2D array of (M x 2)
-        The first column is the start time and second column is the end time. M
-        is the number of occurances of a.
-    b : 2D array of (N x 2)
-        The first column is the start time and second column is the end time. N
-        is the number of occurances of b.
-
-    Returns
-    -------
-    intersection : 2D array of (O x 2)
-        The first column is the start time and second column is the end time. O
-        is the number of occurances of the difference of a and b.
-
-    Example
-    -------
-    a:       [   ]  [         ]        [ ]
-    b:      [   ]       [ ]     []      [    ]
-    result:  [  ]       [ ]             []
-    '''
-    # Convert to a list and then sort in reversed order such that pop() walks
-    # through the occurences from earliest in time to latest in time.
-    a = a.tolist()
-    a.sort(reverse=True)
-    b = b.tolist()
-    b.sort(reverse=True)
-
-    intersection = []
-    if len(a) == 0 or len(b) == 0:
-        # lists are empty, just exit
-        result = np.array([])
-        return result
-
-    lb, ub = a.pop()
-    lb_b, ub_b = b.pop()
-
-    while True:
-        if lb > ub_b:
-            #           [ a ]
-            #     [ b ]
-            # Current epoch in b ends before current epoch in a. Move onto
-            # the next epoch in b.
-            try:
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        elif ub <= lb_b:
-            #   [  a    ]
-            #               [ b        ]
-            # Current epoch in a ends before current epoch in b. Add bounds
-            # and move onto next epoch in a.
-            try:
-                lb, ub = a.pop()
-            except IndexError:
-                break
-        elif (lb == lb_b) and (ub == ub_b):
-            #   [  a    ]
-            #   [  b    ]
-            # Current epoch in a matches epoch in b.
-            try:
-                intersection.append((lb, ub))
-                lb, ub = a.pop()
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        elif (lb <= lb_b) and (ub >= ub_b):
-            #   [  a    ]
-            #     [ b ]
-            # Current epoch in b is fully contained in the  current epoch
-            # from a. Save everything in
-            # a up to the beginning of the current epoch of b. However, keep
-            # the portion of the current epoch in a
-            # that follows the end of the current epoch in b so we can
-            # detremine whether there are additional epochs in b that need
-            # to be cut out..
-            intersection.append((lb_b, ub_b))
-            lb = ub_b
-            try:
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        elif (lb <= lb_b) and (ub >= lb_b) and (ub <= ub_b):
-            #   [  a    ]
-            #     [ b        ]
-            # Current epoch in b begins in a, but extends past a.
-            intersection.append((lb_b, ub))
-            try:
-                lb, ub = a.pop()
-            except IndexError:
-                break
-        elif (ub > lb_b) and (lb <= ub_b):
-            #   [  a    ]
-            # [       b     ]
-            # Current epoch in a is fully contained in b
-            intersection.append((lb, ub))
-            try:
-                lb, ub = a.pop()
-            except IndexError:
-                break
-        elif (ub > lb_b) and (ub < ub_b) and (lb > ub_b):
-            #   [  a    ]
-            # [ b    ]
-            intersection.append((lb, ub_b))
-            lb = ub_b
-            try:
-                lb_b, ub_b = b.pop()
-            except IndexError:
-                break
-        else:
-            # This should never happen.
-            m = 'Unhandled epoch boundary condition. Contact the developers.'
-            raise SystemError(m)
-
-    # Add all remaining epochs from a
-    # intersection.extend(a[::-1])
-    result = np.array(intersection)
-    if result.size == 0:
-        raise Warning("Epochs did not intersect, resulting array"
-                      " is empty.")
-    return result
-
-

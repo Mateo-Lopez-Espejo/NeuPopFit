@@ -1,4 +1,5 @@
 import oddball_functions as of
+import nems_db.baphy as nb
 
 def stim_as_rasterized_point_process(rec, scaling, **context):
     # rasterizes all signal
@@ -14,19 +15,52 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, baseline, **context):
 
     val = val[0]
 
-    # update modelspecs with the adecuate metadata,
-    SI = of.get_recording_SI(val, sub_epoch)
-    modelspecs[0][0]['meta']['SSA_index'] = SI
-    RA = of.get_recording_activity(val, sub_epoch, baseline=baseline)
-    modelspecs[0][0]['meta']['activity'] = RA
+    # update modelspecs with the adecuate metadata, calculates SI and activity for each super_epoch
 
+    jitters = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
+    modelspecs[0][0]['meta']['SSA_index'] = dict(jitters)
+    modelspecs[0][0]['meta']['activity'] = dict.fromkeys(jitters)
+
+    for super_epoch in jitters:
+        dict_key = super_epoch
+        if super_epoch == 'Jitter_both':
+            super_epoch = None
+
+        SI = of.get_recording_SI(val, sub_epoch, super_epoch=super_epoch)
+        modelspecs[0][0]['meta']['SSA_index'][dict_key] = SI
+        RA = of.get_recording_activity(val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
+        modelspecs[0][0]['meta']['activity'][dict_key] = RA
+    # todo test this beauty
     return modelspecs
 
-def calculate_oddball_metrics_by_jitter(val, modelspecs, sub_epoch, baseline, **context):
-    # this
+def give_oddball_format(rec,**context):
+    '''
+    a bunch of functions formating signals within the recording for later oddball analysis.
+    '''
+    rec['resp'] = rec['resp'].rasterize()
+    rec['stim'] = rec['stim'].rasterize()
+    # sets stim as onset with amplitu ecual as maximum value of original stim
+    rec = of.as_rasterized_point_process(rec, scaling='same')
+    # changes Nan values in to zero for the 'stim' signal
+    rec = of.recording_nan_as_zero(rec, ['stim'])
+    # set epochs of Jitter On and Jitter Off
+    rec = of.set_recording_jitter_epochs(rec)
+    # set oddball epochs
+    rec = of.set_recording_oddball_epochs(rec)
+    return {'rec': rec}
 
-
-    return None
+def load_oddball(cellid, **context):
+    # this is cludgy AF TODO ask Stephen about this.
+    cellid = cellid
+    batch = 296
+    options = {}
+    options["stimfmt"] = "envelope"
+    options["chancount"] = 0
+    options["rasterfs"] = 100
+    options['includeprestim'] = 1
+    options['runclass'] = 'SSA'
+    rec = nb.baphy_load_recording(cellid, batch, **options)
+    return {'rec': rec}
 
 
 '''
