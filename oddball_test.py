@@ -28,8 +28,10 @@ debuger.... Lets hope I can keep, my word.
 '''
 
 # test files. the paths will be different between my desktop and laptop.
-test_ctx_file_path = '/home/mateo/NeuPopFit/pickles/180531_test_context_full'
-test_load_file_path = '/home/mateo/NeuPopFit/pickles/180601_test_context_only_load'
+cwd = os.getcwd()
+
+test_ctx_file_path = '{}/pickles/180531_test_context_full'.format(cwd)
+test_load_file_path = '{}/pickles/180601_test_context_only_load'.format(cwd)
 
 
 def ctx():
@@ -57,7 +59,7 @@ def old_df():
 
 
 def odd_ctx():
-    filename = '/home/mateo/NeuPopFit/pickles/180621_test_oddball_ctx'
+    filename = '/home/mateo/oddball_analysis/pickles/180621_test_oddball_ctx'
     ctx = jl.load(filename)
     return ctx
 
@@ -324,7 +326,7 @@ def check_SI_error():
     this revealed the inconsistency between the nan for resp, pred and the mask of each signal.
     '''
     # extract pre fitted model, it already has SI related indices
-    filename = '/home/mateo/NeuPopFit/pickles/180621_test_oddball_ctx'
+    filename = '/home/mateo/oddball_analysis/pickles/180621_test_oddball_ctx'
     ctx = jl.load(filename)
     val = ctx['val'][0]
 
