@@ -45,9 +45,6 @@ def baphy_load_data(parmfilepath, **options):
     # load parameter file
     globalparams, exptparams, exptevents = bd.baphy_parm_read(parmfilepath)
 
-    # TODO: use paths that match LBHB filesystem? new s3 filesystem?
-    #       or make s3 match LBHB?
-
     # figure out stimulus cachefile to load
     if 'stim' in options.keys() and options['stim']:
         stimfilepath = bd.baphy_stim_cachefile(exptparams, parmfilepath, **options)

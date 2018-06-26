@@ -187,7 +187,7 @@ def xform_load():
     # tests a string of xfspecs containing some default loading xpforms and custom made oddball_xpforms
 
     cellid = 'gus016c-a2'  # this cell is not working for some reason
-    cellid = 'gus037d-a1' # this cell is not in the old list of good cells, but it works
+    cellid = 'gus037d-a2' # this cell is not in the old list of good cells, but it works
     batch = 296
     modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
 
@@ -214,7 +214,7 @@ def xform_load():
     normalize = False
     xfspec.append(['nems.xforms.load_recordings',
                    {'recording_uri_list': recordings, 'normalize': normalize}])
-    # this is ultimately calling nems.recording.load_recording_from_targz(targz)
+    # this is ultimately calling nems.recording.load_recording_from_targz(recording_uri)
 
     ctx = {}
     for xfa in xfspec:
@@ -224,7 +224,7 @@ def xform_load():
 
 
 def baphy_load():
-    cellid = 'gus037d-a1'
+    cellid = 'gus037d-a2'
     batch = 296
     options = {}
     options["stimfmt"] = "envelope"
@@ -239,7 +239,8 @@ def baphy_load():
 def oddball_full_analysis():
     ''' this test just run the whole analisis, with custom preprocesing, model fit, and post procecing metrics calculations'''
     cellid = 'gus016c-a2'  # this cell is not working for some reason
-    cellid = 'gus037d-a2'  # this cell is not in the old list of good cells, but it works
+    cellid = 'gus037d-a2'  # this cell only has jitter on for some reason? another cell in the same recording session has both jitters
+    cellid = 'gus037d-a1'  # this cell is not in the old list of good cells, but it works
     batch = 296
     modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
 
@@ -450,6 +451,7 @@ def nan_issue():
                 ax.set_title(recname)
     return ctx, ctx_ls
 
+
 def oddball_format():
     # load the file
     cellid = 'gus037d-a1'
@@ -474,14 +476,58 @@ def oddball_format():
     rec = of.set_recording_oddball_epochs(rec)
     return {'rec': rec}
 
+def all_custom_xforms():
+    cellid = 'gus037d-a1'  # this cell is not in the old list of good cells, but it works
+    batch = 296
+    modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
+
+    # parse modelname
+    kws = modelname.split("_")
+    loader = kws[0]
+    modelspecname = "_".join(kws[1:-1])
+    fitkey = kws[-1]
+
+    # figure out some meta data to save in the model spec
+    meta = {'batch': batch, 'cellid': cellid, 'modelname': modelname,
+            'loader': loader, 'fitkey': fitkey, 'modelspecname': modelspecname,
+            'username': 'svd', 'labgroup': 'lbhb', 'public': 1,
+            'githash': os.environ.get('CODEHASH', ''),
+            'recording': loader}
+
+    # finds raw data location
+    recording_uri = nw.generate_recording_uri(cellid, batch, loader)
+
+    xfspec = list()
+
+    # loader
+    xfspec.append(['oddball_xforms.load_oddball',
+                   {'cellid': cellid}])
+
+    # give oddball format: stim as rasterized point process, nan as zeros, oddball epochs, jitter status epochs,
+    xfspec.append(['oddball_xforms.stim_as_rasterized_point_process', {'scaling': 'same'}])
+
+    # define model architecture
+    xfspec.append(['nems.xforms.init_from_keywords',
+                   {'keywordstring': modelspecname, 'meta': meta}])
 
 
+    # adds jackknife, fitter and prediction
+    xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
 
+    # add metrics correlation
+    xfspec.append(['nems.analysis.api.standard_correlation', {},
+                   ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
 
+    # add SSA related metrics
+    # val, modelspecs, sub_epoch, super_epoch, baseline
+    jitters = ['Jitter_On', 'Jitter_Off', 'Jitter_Both']
+    xfspec.append(['oddball_xforms.calculate_oddball_metrics', {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence'},
+                   ['val', 'modelspecs'], ['modelspecs']])
+    ctx = {}
+    for xfa in xfspec:
+        ctx = xforms.evaluate_step(xfa, ctx)
 
+    return ctx
 
-"""
-right now i need to figure out the difference in loading between baphy_load() and xform_load(). the former adds epochs
-corresponding to the different files being concatenated i.e. Jitter On and Jitter Off experimetns. The later deals with 
-a bunch of NANs in the stimulu and is faster (cached?). but it lacks the epochs corespondign to jitte status.
-"""
+# odd_ctx = all_custom_xforms()
+

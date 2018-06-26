@@ -8,25 +8,27 @@ def stim_as_rasterized_point_process(rec, scaling, **context):
     rec = of.as_rasterized_point_process(rec, scaling=scaling)
     return {'rec': rec}
 
-def calculate_oddball_metrics(val, modelspecs, sub_epoch, baseline, **context):
+def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
     # calculates SSA index and activity index for the validatio. asumes unique validation recording.
     if len(val) != 1:
         raise Warning("multiple val recordings, usign the first. Inverse jackknife if recomended before this step")
 
     val = val[0]
 
+    valid_jitters = {'Jitter_Off', 'Jitter_On', 'Jitter_Both'}
+    if not set(super_epoch).issubset(valid_jitters):
+        raise ValueError("super_epoch must be a subset of {}".format(valid_jitters))
+
     # update modelspecs with the adecuate metadata, calculates SI and activity for each super_epoch
+    modelspecs[0][0]['meta']['SSA_index'] = dict.fromkeys(super_epoch)
+    modelspecs[0][0]['meta']['activity'] = dict.fromkeys(super_epoch)
 
-    jitters = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
-    modelspecs[0][0]['meta']['SSA_index'] = dict(jitters)
-    modelspecs[0][0]['meta']['activity'] = dict.fromkeys(jitters)
+    for sup_ep in super_epoch:
+        dict_key = sup_ep
+        if sup_ep == 'Jitter_Both':
+            sup_ep = None
 
-    for super_epoch in jitters:
-        dict_key = super_epoch
-        if super_epoch == 'Jitter_both':
-            super_epoch = None
-
-        SI = of.get_recording_SI(val, sub_epoch, super_epoch=super_epoch)
+        SI = of.get_recording_SI(val, sub_epoch, super_epoch=sup_ep)
         modelspecs[0][0]['meta']['SSA_index'][dict_key] = SI
         RA = of.get_recording_activity(val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
         modelspecs[0][0]['meta']['activity'][dict_key] = RA
@@ -50,7 +52,6 @@ def give_oddball_format(rec,**context):
     return {'rec': rec}
 
 def load_oddball(cellid, **context):
-    # this is cludgy AF TODO ask Stephen about this.
     cellid = cellid
     batch = 296
     options = {}

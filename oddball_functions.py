@@ -26,7 +26,7 @@ def set_signal_oddball_epochs(signal):
     '''
 
     # checks if the signal already has oddball epochs
-    oddball_epochs_names = set(['f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev'])
+    oddball_epochs_names = {'f1_onset', 'f1_std', 'f1_dev', 'f2_onset', 'f2_std', 'f2_dev'}
     signal_epochs_names = set(signal.epochs.name.unique())
     if oddball_epochs_names.issubset(signal_epochs_names):
         return signal
@@ -198,7 +198,6 @@ def set_signal_jitter_epochs(signal):
     '''
     takes a signal from an ssa experiment, looks for epochs named after files, and renames those epochs
     as Jitter On or Jitter Off. if no file is found, asumes Jitter Off
-    todo if not filename is found looks elsewere to make sure of Jitter status.
     :param signal: a signal object from an oddball experiment
     :return: a copy of the signal object with epochs describing the Jitter status
     '''
@@ -517,7 +516,6 @@ def get_recording_SI(recording, sub_epoch, super_epoch):
     else:
         raise ValueError("The recording does not have 'resp' and 'pred' signals")
 
-    # TODO,  this is raising and exception as a whole, but not when run one by one....
     SI_dict = {sig_key: get_signal_SI(signal, sub_epoch, super_epoch) for sig_key, signal in signals.items() if
                sig_key in relevant_keys}
 
