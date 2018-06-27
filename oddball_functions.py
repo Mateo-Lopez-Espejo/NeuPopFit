@@ -177,6 +177,10 @@ def get_superepoch_subset(signal, super_epoch):
     new_epochs_list = list()
 
     for name, arr in cont_sup_epochs.items():
+        if arr.shape == (0,):
+            #ignores empty arrays TODO, check if this will break things downstream because of absent key
+            # woudl not it be better to have an epoch with start = end = 0?
+            continue
         cont_epoch = pd.DataFrame({
             'name': name,
             'start': arr[:, 0],

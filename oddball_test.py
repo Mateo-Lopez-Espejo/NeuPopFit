@@ -10,7 +10,8 @@ import nems.xform_helper as xhelp
 import nems.utils
 import nems_db.db as db
 import nems_db.xform_wrappers as nw
-import nems_db.baphy as nb  # baphy-specific functions
+import nems_db.baphy as nb
+import nems.recording as recording
 
 import oddball_functions as of
 import oddball_xforms as ox
@@ -28,10 +29,11 @@ debuger.... Lets hope I can keep, my word.
 '''
 
 # test files. the paths will be different between my desktop and laptop.
-cwd = os.getcwd()
+this_script_dir = os.path.dirname(os.path.realpath(__file__))
 
-test_ctx_file_path = '{}/pickles/180531_test_context_full'.format(cwd)
-test_load_file_path = '{}/pickles/180601_test_context_only_load'.format(cwd)
+test_ctx_file_path = '{}/pickles/180531_test_context_full'.format(this_script_dir)
+test_load_file_path = '{}/pickles/180601_test_context_only_load'.format(this_script_dir)
+test_oddball_fit_file_path = '{}/pickles/180601_test_oddball_fit_file_path'.format(this_script_dir)
 
 
 def ctx():
@@ -40,7 +42,7 @@ def ctx():
 
 
 def rec():
-    ctx = test_ctx = jl.load(test_ctx_file_path)
+    test_ctx = jl.load(test_ctx_file_path)
     rec = test_ctx['val'][0]
     return rec
 
@@ -108,7 +110,7 @@ def get_superepoch_subset():
     sig.add_epoch('test_epoch_2', np.array([[100, 201]]))
     sig.add_epoch('test_epoch_3', np.array([[200, 300]]))
     epochs = sig.epochs
-    newepochs =of.get_superepoch_subset(sig, ['test_epoch_1', 'test_epoch_2', 'test_epoch_3'])
+    newepochs = of.get_superepoch_subset(sig, ['test_epoch_1', 'test_epoch_2', 'test_epoch_3'])
     return epochs, newepochs
 
 
@@ -134,7 +136,7 @@ def as_rasterized_point_process():
     val = loaded_ctx['val']
     stim = val.get_signal('stim')
     ax.plot(stim.as_continuous()[0, :])
-    of.as_rasterized_point_process(val)
+    of.as_rasterized_point_process(val, scaling='same')
     stim = val.get_signal('stim')
     ax.plot(stim.as_continuous()[0, :])
 
@@ -189,7 +191,7 @@ def xform_load():
     # tests a string of xfspecs containing some default loading xpforms and custom made oddball_xpforms
 
     cellid = 'gus016c-a2'  # this cell is not working for some reason
-    cellid = 'gus037d-a2' # this cell is not in the old list of good cells, but it works
+    cellid = 'gus037d-a2'  # this cell is not in the old list of good cells, but it works
     batch = 296
     modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
 
@@ -236,75 +238,6 @@ def baphy_load():
     options['runclass'] = 'SSA'
     rec = nb.baphy_load_recording(cellid, batch, **options)
     return rec
-
-
-def oddball_full_analysis():
-    ''' this test just run the whole analisis, with custom preprocesing, model fit, and post procecing metrics calculations'''
-    cellid = 'gus016c-a2'  # this cell is not working for some reason
-    cellid = 'gus037d-a2'  # this cell only has jitter on for some reason? another cell in the same recording session has both jitters
-    cellid = 'gus037d-a1'  # this cell is not in the old list of good cells, but it works
-    batch = 296
-    modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
-
-    # parse modelname
-    kws = modelname.split("_")
-    loader = kws[0]
-    modelspecname = "_".join(kws[1:-1])
-    fitkey = kws[-1]
-
-    # figure out some meta data to save in the model spec
-    meta = {'batch': batch, 'cellid': cellid, 'modelname': modelname,
-            'loader': loader, 'fitkey': fitkey, 'modelspecname': modelspecname,
-            'username': 'svd', 'labgroup': 'lbhb', 'public': 1,
-            'githash': os.environ.get('CODEHASH', ''),
-            'recording': loader}
-
-    # finds raw data location
-    recording_uri = nw.generate_recording_uri(cellid, batch, loader)
-
-    xfspec = list()
-
-    # loader
-    recordings = [recording_uri]
-    normalize = False
-    xfspec.append(['nems.xforms.load_recordings',
-                   {'recording_uri_list': recordings, 'normalize': normalize}])
-
-    # stim as point process
-    xfspec.append(['oddball_xforms.stim_as_rasterized_point_process', {'scaling': 'same'}])
-
-    # define model architecture
-    xfspec.append(['nems.xforms.init_from_keywords',
-                   {'keywordstring': modelspecname, 'meta': meta}])
-
-    '''
-    # add jackknife
-    tfolds = 5
-    xfspec.append(['nems.xforms.mask_for_jackknife',
-                   {'njacks': tfolds, 'epoch_name': 'TRIAL'}])
-
-    # add fitter
-    xfspec.append(['nems.xforms.fit_nfold', {}])
-
-    # add predic
-    xfspec.append(['nems.xforms.predict', {}])
-    '''
-
-    # adds jackknife, fitter and prediction
-    xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
-
-    # add metrics correlation
-    xfspec.append(['nems.analysis.api.standard_correlation', {},
-                   ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
-
-    # add SSA related metrics
-    xfspec.append(['oddball_xforms.calculate_oddball_metrics', {'sub_epoch': 'Stim', 'baseline': 'silence'},
-                   ['val', 'modelspecs'], ['modelspecs']])
-    ctx = {}
-    for xfa in xfspec:
-        ctx = xforms.evaluate_step(xfa, ctx)
-
-    return ctx
 
 
 def SI_metrics():
@@ -478,8 +411,9 @@ def oddball_format():
     rec = of.set_recording_oddball_epochs(rec)
     return {'rec': rec}
 
-def all_custom_xforms():
-    cellid = 'gus037d-a1'  # this cell is not in the old list of good cells, but it works
+
+def all_custom_xforms(force_refit=False):
+    cellid = 'gus037d-a1'  # not in oldcells but has both jitter_status
     batch = 296
     modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
 
@@ -506,12 +440,11 @@ def all_custom_xforms():
                    {'cellid': cellid}])
 
     # give oddball format: stim as rasterized point process, nan as zeros, oddball epochs, jitter status epochs,
-    xfspec.append(['oddball_xforms.stim_as_rasterized_point_process', {'scaling': 'same'}])
+    xfspec.append(['oddball_xforms.give_oddball_format', {'scaling': 'same'}])
 
     # define model architecture
     xfspec.append(['nems.xforms.init_from_keywords',
                    {'keywordstring': modelspecname, 'meta': meta}])
-
 
     # adds jackknife, fitter and prediction
     xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
@@ -523,13 +456,37 @@ def all_custom_xforms():
     # add SSA related metrics
     # val, modelspecs, sub_epoch, super_epoch, baseline
     jitters = ['Jitter_On', 'Jitter_Off', 'Jitter_Both']
-    xfspec.append(['oddball_xforms.calculate_oddball_metrics', {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence'},
+    xfspec.append(['oddball_xforms.calculate_oddball_metrics',
+                   {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence'},
                    ['val', 'modelspecs'], ['modelspecs']])
     ctx = {}
+    # if not forcing refit and cashed fitted context exsits, loads cashed:
+    if force_refit == False and os.path.exists(test_oddball_fit_file_path):
+        print('using cached ctx')
+        ctx = jl.load(test_oddball_fit_file_path)
+        xfspec = xfspec[5:]
+
     for xfa in xfspec:
         ctx = xforms.evaluate_step(xfa, ctx)
+        # for caches the fitted parameters for the sake of speed
+        if xfa[0] == 'nems.xforms.fit_nfold':
+            jl.dump(ctx, test_oddball_fit_file_path)
 
     return ctx
 
-# odd_ctx = all_custom_xforms()
 
+def load_cash_rec():
+    cellid = 'gus037d-a1'  # this cell is not in the old list of good cells, but it works
+    batch = 296
+    options = {}
+    options['recache'] = False
+    options["stimfmt"] = "envelope"
+    options["chancount"] = 0
+    options["rasterfs"] = 100
+    options['includeprestim'] = 1
+    options['runclass'] = 'SSA'
+    rec_path = nw.get_recording_file(cellid, batch, options)
+    rec = recording.load_recording(rec_path)
+    return {'rec': rec}
+
+# odd_ctx = all_custom_xforms()

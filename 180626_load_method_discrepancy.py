@@ -20,9 +20,10 @@ options["chancount"] = 0
 options["rasterfs"] = 100
 options['includeprestim'] = 1
 options['runclass'] = 'SSA'
-rec = nb.baphy_load_recording(cellid, batch, **options)
+rec = nb.baphy_load_recording_nonrasterized(cellid, batch, **options)
+rec['resp'] = rec['resp'].rasterize()
+rec['stim'] = rec['stim'].rasterize()
 baphy_load = rec
-
 
 # thise loads the same cell, batchs using the xform you gave me a while ago in the example
 # ultimately it calls:
@@ -58,8 +59,9 @@ ctx = {}
 for xfa in xfspec:
     ctx = xforms.evaluate_step(xfa, ctx)
 
-xfrom_load = ctx['rec']
-
+xform_load = ctx['rec']
+xform_load['resp'] = xform_load['resp'].rasterize()
+xform_load['stim'] = xform_load['stim'].rasterize()
 
 # there are four main discrepancies
 # 1. time: xform_load is faster as is already cached, however i don't know what prepossessing it has
@@ -71,7 +73,7 @@ xfrom_load = ctx['rec']
 #    what jitter status is in what parts of the recording.
 
 
-recs = {'baphy': baphy_load, 'xform': xfrom_load}
+recs = {'baphy': baphy_load, 'xform': xform_load}
 
 for key, val in recs.items():
     print('{}\n'
