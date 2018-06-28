@@ -32,7 +32,6 @@ debuger.... Lets hope I can keep, my word.
 this_script_dir = os.path.dirname(os.path.realpath(__file__))
 
 test_ctx_file_path = '{}/pickles/180531_test_context_full'.format(this_script_dir)
-test_load_file_path = '{}/pickles/180601_test_context_only_load'.format(this_script_dir)
 test_oddball_fit_file_path = '{}/pickles/180601_test_oddball_fit_file_path'.format(this_script_dir)
 
 
@@ -61,6 +60,7 @@ def old_df():
 
 
 def odd_ctx():
+    print('deprecated')
     filename = '/home/mateo/oddball_analysis/pickles/180621_test_oddball_ctx'
     ctx = jl.load(filename)
     return ctx
@@ -127,18 +127,6 @@ def get_signal_activity():
     rec = test_ctx['val'][0]
     sig = rec['resp']
     act = of.get_signal_activity(sig, None)
-
-
-def as_rasterized_point_process():
-    # not sure what this is doing, dont care anymore...
-    loaded_ctx = jl.load(test_load_file_path)
-    fig, ax = plt.subplots()
-    val = loaded_ctx['val']
-    stim = val.get_signal('stim')
-    ax.plot(stim.as_continuous()[0, :])
-    of.as_rasterized_point_process(val, scaling='same')
-    stim = val.get_signal('stim')
-    ax.plot(stim.as_continuous()[0, :])
 
 
 def preprocess():
