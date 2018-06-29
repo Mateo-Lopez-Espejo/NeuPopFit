@@ -1,7 +1,9 @@
 import oddball_functions as of
+import oddball_db as od
 import nems_db.baphy as nb
 import nems.recording as recording
 import nems_db.xform_wrappers as nw
+
 
 '''
 This is here Just for reference to help me figure out how xfomrms are working
@@ -80,3 +82,14 @@ def load_oddball(cellid, recache=False, **context):
     rec_path = nw.get_recording_file(cellid, batch, options)
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
+
+def oddball_cache(modelspecs,  **context):
+
+    meta = modelspecs[0][0]['meta']
+    cellid = meta['cellid']
+    batch = meta['batch']
+    modelname = meta['modelname']
+
+    ctx = od.load_from_cache(cellid, batch, modelname)
+
+    return ctx

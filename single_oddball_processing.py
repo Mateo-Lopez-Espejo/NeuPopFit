@@ -8,17 +8,46 @@ import logging
 import joblib as jl
 
 
-def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=False):
+def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_in_DB=False):
+    '''
+
+    full a oddball analisis: loads data
+                             strim as rasterized point process i.e. edge or onset
+                             set oddball dependent epochs
+                             set jitter status epochs
+
+                             short term plasticity
+                             fir
+                             dc gain shift
+                             fit
+
+                             calculates ssa index for [actual, predicted] * [f1, f2, cell]
+                             calculates activiti level   ''        ''       ''  ''   ''
+
+
+    :param cellid: str of cell id
+    :param batch: batch number under stephen convention, default is SSA batch 296
+    :param modelname: str defining the modules comprising the model. ToDo Should exclude the loading key!
+    :param force_refit: Bool. if true fits the model regardless of cached values, replaces cached values
+    :param save_in_DB: ??? TODO what is this doing
+    :return: experimetn context ctx. contains recordings and modelspecs
+    '''
+
+    # cellid = 'gus037d-a1'
+    # batch = 296
+    # modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
+
     log = logging.getLogger(__name__)
-    batch = 296
+    batch = batch
 
     log.info('Initializing modelspec(s) for cell/batch {0}/{1}...'.format(
         cellid, batch))
 
     # parse modelname
     kws = modelname.split("_")
-    loader = kws[0]
-    modelspecname = "_".join(kws[1:-1])
+    # ToDo, is this good practice with the loader? it should be included in modelspec
+    loader = 'OddballLoader'
+    modelspecname = "_".join(kws[0:-1])
     fitkey = kws[-1]
 
     # figure out some meta data to save in the model spec
@@ -73,18 +102,21 @@ def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=F
 
     ctx = {}
 
-    # TODO, get rid of this temporal caching. temporal ctx caching
-    if force_refit is False and os.path.exists(
-            '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path'):
-        print('using cached ctx')
-        ctx = jl.load('/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path')
-        xfspec = xfspec[5:]
+    # # TODO, get rid of this temporal caching. temporal ctx caching
+    # if force_refit is False and os.path.exists(
+    #         '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path'):
+    #     print('using cached ctx')
+    #     ctx = jl.load('/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path')
+    #     xfspec = xfspec[5:]
 
     for xfa in xfspec:
         ctx = xforms.evaluate_step(xfa, ctx)
         # for caches the fitted parameters for the sake of speed
-        if xfa[0] == 'nems.xforms.fit_nfold':
-            jl.dump(ctx, '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path')
+        # if xfa[0] == 'nems.xforms.fit_nfold':
+        #     jl.dump(ctx, '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path')
+
+
+    # caches the fitted models TODO implement somehow
 
     # Close the log, remove the handler, and add the 'log' string to context
     log.info('Done (re-)evaluating xforms.')
@@ -96,8 +128,8 @@ def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=F
     modelspecs = ctx['modelspecs']
 
     # save some extra metadata
-    destination = '/auto/data/tmp/modelspecs/{0}/{1}/{2}/'.format(
-        batch, cellid, ms.get_modelspec_longname(modelspecs[0]))
+    destination = '/auto/users/mateo/oddball_metrics_results/{0}/{1}/{2}/'.format(
+        batch, cellid, modelname)
     modelspecs[0][0]['meta']['modelpath'] = destination
     modelspecs[0][0]['meta']['figurefile'] = destination + 'figure.0000.png'
 
@@ -118,40 +150,10 @@ def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=F
     return ctx
 
 
-cellid = 'gus037d-a1'
-batch = 296
-modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
-
-
-ctx = single_oddball_processing(cellid, modelname, force_refit=True, save_in_DB=Fase)
-
-
-# rip off of charlie implementation of local save
-# Save modelspecs
-filepath = '/auto/users/mateo/oddball_metrics_results'
-filepath = '{}/{}'.format(filepath, str(batch))
-
-if not os.path.isdir(filepath):
-    os.mkdir(filepath)
-
-filepath = '{}/{}'.format(filepath, cellid)
-
-if not os.path.isdir(filepath):
-    os.mkdir(filepath)
-
-filepath = '{}/{}'.format(filepath, modelname)
-
-print('saving modelspecs...')
-ms.save_modelspec(modelspec, filepath + '_test.json')
-print('saved modelspecs')
-
-
-
-
 '''
 testing suit
 
 cellid = 'gus037d-a2'
-modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
+modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
 single_oddball_processing(cellid=cellid, modelname=modelname, force_refit=False, save_in_DB = False)
 '''
