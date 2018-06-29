@@ -48,7 +48,7 @@ def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=F
     # adds jackknife, fitter and prediction
     xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
 
-    # TODO add a xform to cach and pull from cach when possible
+    # TODO add a xform to cache and pull from cache when possible
 
     # add metrics correlation
     xfspec.append(['nems.analysis.api.standard_correlation', {},
@@ -73,7 +73,7 @@ def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=F
 
     ctx = {}
 
-    # temporal ctx caching
+    # TODO, get rid of this temporal caching. temporal ctx caching
     if force_refit is False and os.path.exists(
             '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path'):
         print('using cached ctx')
@@ -116,6 +116,36 @@ def single_oddball_processing(cellid, modelname, force_refit=False, save_in_DB=F
                                 username="MLE", labgroup="lbhb")
 
     return ctx
+
+
+cellid = 'gus037d-a1'
+batch = 296
+modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
+
+
+ctx = single_oddball_processing(cellid, modelname, force_refit=True, save_in_DB=Fase)
+
+
+# rip off of charlie implementation of local save
+# Save modelspecs
+filepath = '/auto/users/mateo/oddball_metrics_results'
+filepath = '{}/{}'.format(filepath, str(batch))
+
+if not os.path.isdir(filepath):
+    os.mkdir(filepath)
+
+filepath = '{}/{}'.format(filepath, cellid)
+
+if not os.path.isdir(filepath):
+    os.mkdir(filepath)
+
+filepath = '{}/{}'.format(filepath, modelname)
+
+print('saving modelspecs...')
+ms.save_modelspec(modelspec, filepath + '_test.json')
+print('saved modelspecs')
+
+
 
 
 '''
