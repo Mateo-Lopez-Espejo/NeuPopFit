@@ -133,14 +133,14 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     modelspecs[0][0]['meta']['modelpath'] = destination
     modelspecs[0][0]['meta']['figurefile'] = destination + 'figure.0000.png'
 
-    # save results
-    log.info('Saving modelspec(s) to {0} ...'.format(destination))
-    xforms.save_analysis(destination,
-                         recording=ctx['rec'],
-                         modelspecs=modelspecs,
-                         xfspec=xfspec,
-                         figures=ctx['figures'],
-                         log=log_xf)
+    # save results Todo figure out the good way of saving stuff
+    # log.info('Saving modelspec(s) to {0} ...'.format(destination))
+    # xforms.save_analysis(destination,
+    #                      recording=ctx['rec'],
+    #                      modelspecs=modelspecs,
+    #                      xfspec=xfspec,
+    #                      figures=ctx['figures'],
+    #                      log=log_xf)
 
     if save_in_DB:
         # save in database as well TODO why is saving as single elemetn of modelspec?
