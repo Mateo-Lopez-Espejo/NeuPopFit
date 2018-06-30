@@ -8,9 +8,9 @@ executable_path='/auto/users/mateo/miniconda3/envs/nemsenv/bin/python'
 script_path='/auto/users/mateo/oddball_analysis/cluster_script_180629.py'
 
 # parameters that will be passed to script as argv[1], argv[2], argv[3]:
-parm1 = cellid = 'gus037d-a2'
-parm2 = batch = 296
-parm3 = modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
+parm1 = cellid = 'gus037d-a1'
+parm2 = batch = 296 
+parm3 = modelname = 'stp2_fir2x15_lvl1_basic-nftrial' 
 
 user = 'Mateo'
 force_rerun = True
@@ -23,4 +23,4 @@ force_rerun = True
 
 qid,msg = nd.enqueue_single_model(cellid=cellid, batch=batch, modelname=modelname,
                                   user=user, session=None, force_rerun=force_rerun,
-                                  executable_path=None, script_path=script_path)
+                                  executable_path=executable_path, script_path=script_path)

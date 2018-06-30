@@ -70,7 +70,7 @@ def set_signal_oddball_epochs(signal):
     sub_epochs_keys = ['PreStimSilence', 'PostStimSilence']
     sub_epochs_dict = {key: oddball_epochs.loc[
         oddball_epochs.name == key, ['start', 'end']
-    ].sort_values(['end']).as_matrix()
+    ].sort_values(['end']).as_matrix() # Todo Solve the as_matrix replaced by value
                        for key in sub_epochs_keys}
 
     # checks size congruence of  PreStimSilence and PostStimSilence
@@ -94,7 +94,7 @@ def set_signal_oddball_epochs(signal):
     # iterates over every oddball epoch and saves the intersectiosn with PreStimSilence Stim and PostStimSilence
     for _, oddball_key in key_mapping.items():
         oddball_matrix = oddball_epochs.loc[oddball_epochs.name == oddball_key, ['start', 'end']
-        ].sort_values(['end']).as_matrix()
+        ].sort_values(['end']).as_matrix() # Todo Solve the as_matrix replaced by value
 
         for sub_epoch_name, sub_epoch_matrix in sub_epochs_dict.items():
             oddball_subepoch_matrix = ep.epoch_intersection(sub_epoch_matrix, oddball_matrix)
@@ -142,7 +142,7 @@ def get_superepoch_subset(signal, super_epoch):
     for sup in super_epoch:
         # checks if superepochs are within the signal epochs
         if sup not in e_names:
-            raise ValueError("super_epoch {} is not an epoch of the signal".format(sup))
+            raise Warning("super_epoch {} is not an epoch of the signal".format(sup))
 
     # get the equivalent np array of the specified 2D array of (M x 2), holds in dict to add later
     superepoch_dict = {sup: epochs.loc[epochs.name == sup, ['start', 'end']].values

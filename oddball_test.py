@@ -30,24 +30,23 @@ debuger.... Lets hope I can keep, my word.
 
 # test files. the paths will be different between my desktop and laptop.
 this_script_dir = os.path.dirname(os.path.realpath(__file__))
-
-test_ctx_file_path = '{}/pickles/180531_test_context_full'.format(this_script_dir)
-test_oddball_fit_file_path = '{}/pickles/180601_test_oddball_fit_file_path'.format(this_script_dir)
+oddball_test_cache_root = '{}/pickles/test_cash'.format(this_script_dir)
+fast_cache = '{}_gus037d-a1_296_stp2_fir2x15_lvl1_basic-nftrial'.format(oddball_test_cache_root)
 
 
 def ctx():
-    ctx = jl.load(test_ctx_file_path)
+    ctx = jl.load(fast_cache)
     return ctx
 
 
 def rec():
-    test_ctx = jl.load(test_ctx_file_path)
+    test_ctx = jl.load(fast_cache)
     rec = test_ctx['val'][0]
     return rec
 
 
 def sig():
-    ctx = test_ctx = jl.load(test_ctx_file_path)
+    ctx = test_ctx = jl.load(fast_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     return sig
@@ -94,7 +93,7 @@ def oldcells():
 
 
 def set_signal_oddball_epochs():
-    test_ctx = jl.load(test_ctx_file_path)
+    test_ctx = jl.load(fast_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     odd_sig = of.set_signal_oddball_epochs(sig)
@@ -103,7 +102,7 @@ def set_signal_oddball_epochs():
 
 
 def get_superepoch_subset():
-    ctx = test_ctx = jl.load(test_ctx_file_path)
+    ctx = test_ctx = jl.load(fast_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     sig.add_epoch('test_epoch_1', np.array([[0, 101]]))
@@ -115,7 +114,7 @@ def get_superepoch_subset():
 
 
 def get_signal_SI():
-    test_ctx = jl.load(test_ctx_file_path)
+    test_ctx = jl.load(fast_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     SI = of.get_signal_SI(sig, None)
@@ -123,7 +122,7 @@ def get_signal_SI():
 
 
 def get_signal_activity():
-    test_ctx = jl.load(test_ctx_file_path)
+    test_ctx = jl.load(fast_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     act = of.get_signal_activity(sig, None)
@@ -229,7 +228,7 @@ def baphy_load():
 
 
 def SI_metrics():
-    ctx = jl.load(test_ctx_file_path)
+    ctx = jl.load(fast_cache)
 
     xfa = ['oddball_xforms.calculate_oddball_metrics', {'sub_epoch': 'Stim', 'baseline': 'silence'},
            ['val', 'modelspecs'], ['modelspecs']]
@@ -284,97 +283,6 @@ def loader_error():
     recording_uri = nw.generate_recording_uri(cellid, batch, loader)
     return recording_uri
 
-
-def nan_issue():
-    '''
-    Suddenly for some reason the issue is no longer there
-    '''
-    cellid = 'gus016c-a2'  # this cell is not working for some reason
-    cellid = 'gus037d-a2'  # this cell is not in the old list of good cells, but it works
-    batch = 296
-    modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
-
-    # parse modelname
-    kws = modelname.split("_")
-    loader = kws[0]
-    modelspecname = "_".join(kws[1:-1])
-    fitkey = kws[-1]
-
-    # figure out some meta data to save in the model spec
-    meta = {'batch': batch, 'cellid': cellid, 'modelname': modelname,
-            'loader': loader, 'fitkey': fitkey, 'modelspecname': modelspecname,
-            'username': 'svd', 'labgroup': 'lbhb', 'public': 1,
-            'githash': os.environ.get('CODEHASH', ''),
-            'recording': loader}
-
-    # finds raw data location
-    recording_uri = nw.generate_recording_uri(cellid, batch, loader)
-
-    xfspec = list()
-
-    # loader
-    recordings = [recording_uri]
-    normalize = False
-    xfspec.append(['nems.xforms.load_recordings',
-                   {'recording_uri_list': recordings, 'normalize': normalize}])
-
-    # stim as point process
-    xfspec.append(['oddball_xforms.stim_as_rasterized_point_process', {'scaling': 'same'}])
-
-    # estimation validation subsets, This is redundant given the jackknife generating the est val subsets
-    xfspec.append(['nems.xforms.use_all_data_for_est_and_val',
-                   {}])
-
-    # define model architecture
-    xfspec.append(['nems.xforms.init_from_keywords',
-                   {'keywordstring': modelspecname, 'meta': meta}])
-
-    # adds jackknife, fitter and prediction
-    xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
-
-    # add metrics correlation
-    xfspec.append(['nems.analysis.api.standard_correlation', {},
-                   ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
-
-    # add SSA related metrics
-    xfspec.append(['oddball_xforms.calculate_oddball_metrics', {'sub_epoch': 'Stim', 'baseline': 'silence'},
-                   ['val', 'modelspecs'], ['modelspecs']])
-
-    ctx = {}
-    ctx_ls = list()
-    fig, axes = plt.subplots(len(xfspec), 3)
-    for row, xfa in enumerate(xfspec):
-        new_ctx = xforms.evaluate_step(xfa, ctx)
-        ctx_ls.append(new_ctx)
-        ctx = new_ctx
-        # get the response of the estimation and validation data set,
-        step_name = xfa[0]
-
-        for col, [recname, rec] in enumerate(ctx.items()):
-            if recname not in ['rec', 'est', 'val']:
-                continue
-            else:
-                pass
-
-            if isinstance(rec, list):
-                pass
-            else:
-                # makes into a list
-                rec = [rec]
-
-            # iterates over each recordign, takes the signal, gets the nans, plots
-
-            for ii, thisrec in enumerate(rec):
-                sig = thisrec['stim']
-                respnan = np.isnan(sig.rasterize().as_continuous().T)
-                ax = axes[row, col]
-                ax.plot(respnan, label='jackknife {}'.format(ii))
-                if col == 0:
-                    ax.set_ylabel(step_name)
-                ax.set_title(recname)
-    return ctx, ctx_ls
-
-
 def oddball_format():
     # load the file
     cellid = 'gus037d-a1'
@@ -400,15 +308,15 @@ def oddball_format():
     return {'rec': rec}
 
 
-def all_custom_xforms(force_refit=False):
-    cellid = 'gus037d-a1'  # not in oldcells but has both jitter_status
+def all_custom_xforms(cellid='gus037d-a1', force_refit=False):
+    cellid = cellid  # default not in oldcells but has both jitter_status
     batch = 296
-    modelname = 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
+    modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
 
     # parse modelname
     kws = modelname.split("_")
-    loader = kws[0]
-    modelspecname = "_".join(kws[1:-1])
+    loader = 'oddball_load'
+    modelspecname = "_".join(kws[0:-1])
     fitkey = kws[-1]
 
     # figure out some meta data to save in the model spec
@@ -419,7 +327,9 @@ def all_custom_xforms(force_refit=False):
             'recording': loader}
 
     # finds raw data location
-    recording_uri = nw.generate_recording_uri(cellid, batch, loader)
+    #recording_uri = nw.generate_recording_uri(cellid, batch, loader)
+    # defines test cache file
+    cashpath = '{}_{}_{}_{}'.format(oddball_test_cache_root, cellid, batch, modelname)
 
     xfspec = list()
 
@@ -449,16 +359,16 @@ def all_custom_xforms(force_refit=False):
                    ['val', 'modelspecs'], ['modelspecs']])
     ctx = {}
     # if not forcing refit and cashed fitted context exsits, loads cashed:
-    if force_refit == False and os.path.exists(test_oddball_fit_file_path):
+    if force_refit == False and os.path.exists(cashpath):
         print('using cached ctx')
-        ctx = jl.load(test_oddball_fit_file_path)
+        ctx = jl.load(cashpath)
         xfspec = xfspec[5:]
 
     for xfa in xfspec:
         ctx = xforms.evaluate_step(xfa, ctx)
         # for caches the fitted parameters for the sake of speed
         if xfa[0] == 'nems.xforms.fit_nfold':
-            jl.dump(ctx, test_oddball_fit_file_path)
+            jl.dump(ctx, cashpath)
 
     return ctx
 
