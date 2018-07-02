@@ -6,6 +6,7 @@ import nems.signal as signal
 import copy
 import nems_db.baphy as nb
 import nems_db.db as db
+import warnings
 
 
 # Functions working on signal objects
@@ -142,7 +143,8 @@ def get_superepoch_subset(signal, super_epoch):
     for sup in super_epoch:
         # checks if superepochs are within the signal epochs
         if sup not in e_names:
-            raise Warning("super_epoch {} is not an epoch of the signal".format(sup))
+            mesg = "super_epoch {} is not an epoch of the signal".format(sup)
+            warnings.warn(RuntimeWarning(mesg))
 
     # get the equivalent np array of the specified 2D array of (M x 2), holds in dict to add later
     superepoch_dict = {sup: epochs.loc[epochs.name == sup, ['start', 'end']].values
@@ -159,8 +161,8 @@ def get_superepoch_subset(signal, super_epoch):
             c = ep.epoch_union(a, b)
             superepoch_list.append(c)
         except IndexError:
-            print('this message should never show')
-            break
+            raise SystemError('this message should never show')
+
     super_epoch_union = superepoch_list[0]  # this should be a single item list
 
     # iterates over every other epoch that is not a super_epoch

@@ -8,7 +8,7 @@ executable_path='/auto/users/mateo/miniconda3/envs/nemsenv/bin/python'
 script_path='/auto/users/mateo/oddball_analysis/cluster_script_180629.py'
 
 # parameters that will be passed to script as argv[1], argv[2], argv[3]:
-parm1 = cellid = 'gus037d-a1'
+parm1 = cellid = 'gus037d-a2'
 parm2 = batch = 296 
 parm3 = modelname = 'stp2_fir2x15_lvl1_basic-nftrial' 
 

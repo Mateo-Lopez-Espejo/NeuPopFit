@@ -15,6 +15,7 @@ import nems.recording as recording
 
 import oddball_functions as of
 import oddball_xforms as ox
+import single_oddball_processing as sop
 
 # reload modules just in case??
 import imp
@@ -386,5 +387,13 @@ def load_cash_rec():
     rec_path = nw.get_recording_file(cellid, batch, options)
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
+
+def single_oddball_processing():
+    cellid = 'gus037d-a2'
+    batch = 296
+    modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
+
+    ctx = sop.single_oddball_processing(cellid, batch, modelname)
+    return ctx
 
 # odd_ctx = all_custom_xforms()
