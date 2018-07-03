@@ -27,7 +27,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
     :param cellid: str of cell id
     :param batch: batch number under stephen convention, default is SSA batch 296
-    :param modelname: str defining the modules comprising the model. ToDo Should exclude the loading key!
+    :param modelname: str defining the modules comprising the model.
     :param force_refit: Bool. if true fits the model regardless of cached values, replaces cached values
     :param save_in_DB: ??? TODO what is this doing
     :return: experimetn context ctx. contains recordings and modelspecs
@@ -57,31 +57,73 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
             'githash': os.environ.get('CODEHASH', ''),
             'recording': loader}
 
-    # recording_uri = nw.generate_recording_uri(cellid, batch, loader)
+    # chekcs for caches, uses if exists, else fits de novo
+    destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
+        batch, cellid, modelname)
+    # local destination test
+    # destination = '/home/mateo/oddball_results/{0}/{1}/{2}/'.format(
+    #     batch, cellid, modelname)
 
-    # generate xfspec, which defines sequence of events to load data,
-    # generate modelspec, fit data, plot results and save
-    xfspec = list()
 
-    # loader
-    xfspec.append(['oddball_xforms.load_oddball',
-                   {'cellid': cellid}])
+    if os.path.exists(destination) and force_refit == False:
+        # loads xfspecs and  ctx, do not reevalueate
+        xfspec, ctx = xforms.load_analysis(destination, eval_model=True) # ToDo why this evalmode does not refit for so long
 
-    # give oddball format: stim as rasterized point process, nan as zeros, oddball epochs, jitter status epochs,
-    xfspec.append(['oddball_xforms.give_oddball_format', {'scaling': 'same'}])
+    elif not os.path.exists(destination) or force_refit == True:
+        # generate xfspec, which defines sequence of events to load data,
+        # 1. Preprosesign and fit
+        xfspec = list()
 
-    # define model architecture
-    xfspec.append(['nems.xforms.init_from_keywords',
-                   {'keywordstring': modelspecname, 'meta': meta}])
+        # loader
+        xfspec.append(['oddball_xforms.load_oddball',
+                       {'cellid': cellid, 'recache': False}])
 
-    # adds jackknife, fitter and prediction
-    xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
+        # give oddball format: stim as rasterized point process, nan as zeros, oddball epochs, jitter status epochs,
+        xfspec.append(['oddball_xforms.give_oddball_format', {'scaling': 'same'}])
 
-    # TODO add a xform to cache and pull from cache when possible
+        # define model architecture
+        xfspec.append(['nems.xforms.init_from_keywords',
+                       {'keywordstring': modelspecname, 'meta': meta}])
 
-    # add metrics correlation
-    xfspec.append(['nems.analysis.api.standard_correlation', {},
-                   ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
+        # adds jackknife, fitter and prediction
+        xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
+
+        # add metrics correlation
+        xfspec.append(['nems.analysis.api.standard_correlation', {},
+                       ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
+
+        # adds sumary plots ToDo i dont like this plotting, but is necesary to user Save analysisi
+        xfspec.append(['nems.xforms.plot_summary',    {}])
+
+        # Create a log stream set to the debug level; add it as a root log handler
+        log_stream = io.StringIO()
+        ch = logging.StreamHandler(log_stream)
+        ch.setLevel(logging.DEBUG)
+        fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        formatter = logging.Formatter(fmt)
+        ch.setFormatter(formatter)
+        rootlogger = logging.getLogger()
+        rootlogger.addHandler(ch)
+
+        #### evaluates preprocessing and fitting ####
+        ctx, log_xf = xforms.evaluate(xfspec)
+
+        # caches analisys
+        modelspecs = ctx['modelspecs']
+        modelspecs[0][0]['meta']['modelpath'] = destination
+        modelspecs[0][0]['meta']['figurefile'] = destination + 'figure.0000.png'
+
+        # save results Todo figure out the good way of saving stuff
+        log.info('Saving modelspec(s) to {0} ...'.format(destination))
+        xforms.save_analysis(destination,
+                             recording=ctx['rec'],
+                             modelspecs=modelspecs,
+                             xfspec=xfspec,
+                             figures=ctx['figures'],
+                             log=log_xf)
+    else:
+        raise SystemError("WTF just happened? contact Mateo")
+
 
     # add SSA related metrics
     # val, modelspecs, sub_epoch, super_epoch, baseline
@@ -90,60 +132,17 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
                    {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence'},
                    ['val', 'modelspecs'], ['modelspecs']])
 
-    # Create a log stream set to the debug level; add it as a root log handler
-    log_stream = io.StringIO()
-    ch = logging.StreamHandler(log_stream)
-    ch.setLevel(logging.DEBUG)
-    fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    formatter = logging.Formatter(fmt)
-    ch.setFormatter(formatter)
-    rootlogger = logging.getLogger()
-    rootlogger.addHandler(ch)
-
-    ctx = {}
-
-    # # TODO, get rid of this temporal caching. temporal ctx caching
-    # if force_refit is False and os.path.exists(
-    #         '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path'):
-    #     print('using cached ctx')
-    #     ctx = jl.load('/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path')
-    #     xfspec = xfspec[5:]
-
-    for xfa in xfspec:
-        ctx = xforms.evaluate_step(xfa, ctx)
-        # for caches the fitted parameters for the sake of speed
-        # if xfa[0] == 'nems.xforms.fit_nfold':
-        #     jl.dump(ctx, '/home/mateo/oddball_analysis/pickles/180601_test_oddball_fit_file_path')
+    # evaluate the last step.
+    ctx, log_xf = xforms.evaluate(xfspec, ctx, start =-1 , stop=None)
 
 
-    # caches the fitted models TODO implement somehow
-
-    # Close the log, remove the handler, and add the 'log' string to context
-    log.info('Done (re-)evaluating xforms.')
-    ch.close()
-    rootlogger.removeFilter(ch)
-
-    log_xf = log_stream.getvalue()
-
+    # saves modelspecs
+    my_path = '/home/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
     modelspecs = ctx['modelspecs']
-
-    # save some extra metadata
-    destination = '/auto/users/mateo/oddball_metrics_results/{0}/{1}/{2}/'.format(
-        batch, cellid, modelname)
-    modelspecs[0][0]['meta']['modelpath'] = destination
-    modelspecs[0][0]['meta']['figurefile'] = destination + 'figure.0000.png'
-
-    # save results Todo figure out the good way of saving stuff
-    # log.info('Saving modelspec(s) to {0} ...'.format(destination))
-    # xforms.save_analysis(destination,
-    #                      recording=ctx['rec'],
-    #                      modelspecs=modelspecs,
-    #                      xfspec=xfspec,
-    #                      figures=ctx['figures'],
-    #                      log=log_xf)
+    ms.save_modelspec(modelspecs, my_path)
 
     if save_in_DB:
-        # save in database as well TODO why is saving as single elemetn of modelspec?
+        # save in database as well TODO why is saving as single element of modelspec?
         nd.update_results_table(modelspecs[0], preview=None,
                                 username="MLE", labgroup="lbhb")
 

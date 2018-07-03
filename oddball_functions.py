@@ -228,6 +228,7 @@ def set_signal_jitter_epochs(signal):
                  for path in parmfiles}
 
     jitter_status = list()
+    # to relate filename to jitter status pulls experimetn parameters
     for oldkey, _ in epoch_rename_map.items():
         # todo this thing takes a lot of time. It should be implemented when generating the recording/signal epochs.
         globalparams, exptparams, exptevents = nb.baphy_parm_read(parmfiles[oldkey])
@@ -248,7 +249,7 @@ def set_signal_jitter_epochs(signal):
 
 def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
     '''
-    returns a dictionary of the data matching each element in the usual Oddball epochs.
+    returns a dictionary arrays  corresponding to stacked repetitions of each of the Oddball epochs.
 
     Parameters
     ----------
@@ -258,7 +259,7 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
         it should be 'Stim', 'PreStimSilence' or 'PostStimSilence'
     super_epoch: None, str, list of str
         if none, returns  all REFERENCE possibel, otherwise returns REFERENCES(or sub epochs) contained within super_epoch
-        ussually it should be 'Jitter_ON' or 'Jitter_Off'
+        in the context of the oddbal experiments it should be 'Jitter_ON', 'Jitter_Off' or 'Jitter_Both'
 
     Returns
     -------
@@ -275,6 +276,15 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
 
     # select subset of epochs contained in super_epoch
     super_epoch_subset = get_superepoch_subset(oddball_signal, super_epoch=super_epoch)
+    # if super_epochs_subset is empty, returns a dict with the same structure as normal, but filled with empty arrays
+    if super_epoch_subset.empty:
+        mesg = 'no epochs contained in {}, returning dict with nan arrays '.format(str(super_epoch))
+        warnings.warn(RuntimeWarning(mesg))
+        folded_signal = {key: np.full((1,1), np.nan) for key in oddball_epoch_names}
+        return folded_signal
+    else:
+        pass
+
     oddball_signal = oddball_signal._modified_copy(oddball_signal._data, epochs=super_epoch_subset)
 
     # extract either one subepochs or multiple subepochs and concatenates\
@@ -330,6 +340,8 @@ def get_signal_SI(signal, sub_epoch, super_epoch):
         '''
 
     folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch, super_epoch=super_epoch)
+
+    # Todo if folded_oddball is NaN, sets all values of SI to NaN
 
     # calculates PSTH
     PSTHs = {oddball_epoch_name: np.squeeze(np.nanmean(epoch_data, axis=0))
@@ -402,6 +414,10 @@ def get_signal_activity(signal, sub_epoch, super_epoch, baseline='silence', metr
 
     # concatenates all sound types (onse, std, dev) by their frequency
     folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch, super_epoch=super_epoch)
+
+    # Todo if folded_oddball is NaN, sets all values of SI to NaN
+
+
     pooled_by_freq = dict.fromkeys(['f1', 'f2'])
     for key in pooled_by_freq.keys():
         pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if

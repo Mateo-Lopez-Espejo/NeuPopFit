@@ -53,13 +53,12 @@ if __name__ == '__main__':
     batch = sys.argv[2]
     modelname = sys.argv[3]
 
-    sys.path.append('/auto/users/luke/Projects/SPS/NEMS/')
 
     print("Running single_oddball_processing with parameters ({0},{1},{2})".format(cellid, batch, modelname))
     ctx = sop.single_oddball_processing(cellid, batch, modelname)
 
-    print('saving modelspecs')
-    od.save_oddball_modelspecs(ctx)
+    # print('saving modelspecs')
+    # od.save_oddball_modelspecs(ctx)
 
     # Mark completed in the queue. Note that this should happen last thing!
     # Otherwise the job might still crash after being marked as complete.

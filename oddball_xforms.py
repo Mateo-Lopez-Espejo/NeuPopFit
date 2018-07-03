@@ -2,7 +2,6 @@ import oddball_functions as of
 import oddball_db as od
 import nems_db.baphy as nb
 import nems.recording as recording
-import nems_db.xform_wrappers as nw
 
 
 '''
@@ -74,22 +73,13 @@ def load_oddball(cellid, recache=False, **context):
     batch = 296
     options = {}
     options['recache'] = recache
-    options["stimfmt"] = "envelope"
-    options["chancount"] = 0
-    options["rasterfs"] = 100
+    options['stimfmt'] = "envelope"
+    options['chancount'] = 0
+    options['rasterfs'] = 100
     options['includeprestim'] = 1
     options['runclass'] = 'SSA'
-    rec_path = nw.get_recording_file(cellid, batch, options)
+    rec_path = nb.baphy_data_path(cellid, batch, **options) # gets the path, if it does not exists, loads and caches.
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
 
-def oddball_cache(modelspecs,  **context):
 
-    meta = modelspecs[0][0]['meta']
-    cellid = meta['cellid']
-    batch = meta['batch']
-    modelname = meta['modelname']
-
-    ctx = od.load_from_cache(cellid, batch, modelname)
-
-    return ctx

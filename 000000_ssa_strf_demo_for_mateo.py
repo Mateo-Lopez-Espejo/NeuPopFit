@@ -82,7 +82,7 @@ if autoPlot:
     xfspec.append(['nems.xforms.plot_summary',    {}])
 
 # actually do the fit
-# ctx, log_xf = xforms.evaluate(xfspec)
+ctx, log_xf = xforms.evaluate(xfspec)
 # Evaluate the xforms
 
 # Create a log stream set to the debug level; add it as a root log handler

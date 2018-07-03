@@ -34,6 +34,15 @@ this_script_dir = os.path.dirname(os.path.realpath(__file__))
 oddball_test_cache_root = '{}/pickles/test_cash'.format(this_script_dir)
 fast_cache = '{}_gus037d-a1_296_stp2_fir2x15_lvl1_basic-nftrial'.format(oddball_test_cache_root)
 
+def test():
+    # totally useless function but i learned howe to unpack a dictionary as local variables:
+    # locals().update(dict)
+    ddd = {'cellid': 'gus037d-a1',
+           'batch': 296,
+           'modelname': 'stp2_fir2x15_lvl1_basic-nftrial'}
+
+    return ddd
+
 
 def ctx():
     ctx = jl.load(fast_cache)
@@ -309,71 +318,6 @@ def oddball_format():
     return {'rec': rec}
 
 
-def all_custom_xforms(cellid='gus037d-a1', force_refit=False):
-    cellid = cellid  # default not in oldcells but has both jitter_status
-    batch = 296
-    modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
-
-    # parse modelname
-    kws = modelname.split("_")
-    loader = 'oddball_load'
-    modelspecname = "_".join(kws[0:-1])
-    fitkey = kws[-1]
-
-    # figure out some meta data to save in the model spec
-    meta = {'batch': batch, 'cellid': cellid, 'modelname': modelname,
-            'loader': loader, 'fitkey': fitkey, 'modelspecname': modelspecname,
-            'username': 'svd', 'labgroup': 'lbhb', 'public': 1,
-            'githash': os.environ.get('CODEHASH', ''),
-            'recording': loader}
-
-    # finds raw data location
-    #recording_uri = nw.generate_recording_uri(cellid, batch, loader)
-    # defines test cache file
-    cashpath = '{}_{}_{}_{}'.format(oddball_test_cache_root, cellid, batch, modelname)
-
-    xfspec = list()
-
-    # loader
-    xfspec.append(['oddball_xforms.load_oddball',
-                   {'cellid': cellid}])
-
-    # give oddball format: stim as rasterized point process, nan as zeros, oddball epochs, jitter status epochs,
-    xfspec.append(['oddball_xforms.give_oddball_format', {'scaling': 'same'}])
-
-    # define model architecture
-    xfspec.append(['nems.xforms.init_from_keywords',
-                   {'keywordstring': modelspecname, 'meta': meta}])
-
-    # adds jackknife, fitter and prediction
-    xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
-
-    # add metrics correlation
-    xfspec.append(['nems.analysis.api.standard_correlation', {},
-                   ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
-
-    # add SSA related metrics
-    # val, modelspecs, sub_epoch, super_epoch, baseline
-    jitters = ['Jitter_On', 'Jitter_Off', 'Jitter_Both']
-    xfspec.append(['oddball_xforms.calculate_oddball_metrics',
-                   {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence'},
-                   ['val', 'modelspecs'], ['modelspecs']])
-    ctx = {}
-    # if not forcing refit and cashed fitted context exsits, loads cashed:
-    if force_refit == False and os.path.exists(cashpath):
-        print('using cached ctx')
-        ctx = jl.load(cashpath)
-        xfspec = xfspec[5:]
-
-    for xfa in xfspec:
-        ctx = xforms.evaluate_step(xfa, ctx)
-        # for caches the fitted parameters for the sake of speed
-        if xfa[0] == 'nems.xforms.fit_nfold':
-            jl.dump(ctx, cashpath)
-
-    return ctx
-
-
 def load_cash_rec():
     cellid = 'gus037d-a1'  # this cell is not in the old list of good cells, but it works
     batch = 296
@@ -388,8 +332,8 @@ def load_cash_rec():
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
 
-def single_oddball_processing():
-    cellid = 'gus037d-a2'
+def single_oddball_processing(cellid = 'gus037d-a1'):
+    cellid = cellid
     batch = 296
     modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
 

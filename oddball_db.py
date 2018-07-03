@@ -2,6 +2,13 @@ import nems.modelspec as ms
 import os
 import joblib as jl
 
+# important db root path
+root_path = '/auto/users/mateo/oddball_results'
+
+# less important test cache path
+cache_path = '/home/mateo/oddball_analysis/pickles'
+
+
 def save_oddball_modelspecs(ctx):
     '''
     saves modeslpecs to my personal file of (right now for testing).
@@ -17,7 +24,7 @@ def save_oddball_modelspecs(ctx):
     modelname = meta['modelname']
 
     # definese directory based on my personal file/batch/cellid/modelname, crates if non existent
-    filepath = '/auto/users/mateo/oddball_metrics_results'
+    filepath = root_path
     filepath = '{}/{}'.format(filepath, str(batch))
     if not os.path.isdir(filepath):
         os.mkdir(filepath)
@@ -51,7 +58,7 @@ def cache_fitted_context(ctx):
     modelname = meta['modelname']
 
     # definese directory based on my personal file/batch/cellid/modelname, crates if non existent
-    filepath = '/auto/users/mateo/oddball_ctx_cache'
+    filepath = cache_path
     filepath = '{}/{}'.format(filepath, str(batch))
     if not os.path.isdir(filepath):
         os.mkdir(filepath)
@@ -80,7 +87,7 @@ def load_from_cache(cellid, batch, modelname):
     :return: ctx, dict. contains recordings and modelspecs
     '''
 
-    filepath = '/auto/users/mateo/oddball_ctx_cache/{}/{}/{}'.format(batch, cellid, modelname)
+    filepath = '{}/{}/{}/{}'.format(cache_path ,batch, cellid, modelname)
     ctx = jl.load(filepath)
 
     return ctx
