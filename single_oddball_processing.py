@@ -137,7 +137,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
 
     # saves modelspecs
-    my_path = '/home/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
+    my_path = '/auto/users/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
     modelspecs = ctx['modelspecs']
     ms.save_modelspec(modelspecs, my_path)
 
