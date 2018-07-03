@@ -50,7 +50,7 @@ def set_signal_oddball_epochs(signal):
 
     # Checks the input signal has the adecuates frequencies and rates dimentions
     if (len(standard_deviant_rates) != 2) or (len(center_frequencies) != 2):
-        raise ValueError("epochs contain {} presetnations rates, 2 are required\n"
+        raise ValueError("epochs contain {} presentation rates, 2 are required\n"
                          "epochs contain {} center frequencies, 2 are required".format(len(standard_deviant_rates),
                                                                                        len(center_frequencies)))
 
@@ -233,8 +233,8 @@ def set_signal_jitter_epochs(signal):
         # todo this thing takes a lot of time. It should be implemented when generating the recording/signal epochs.
         globalparams, exptparams, exptevents = nb.baphy_parm_read(parmfiles[oldkey])
 
-        # convoluted indexig into the nested dictionaries ot get Jitter status
-        j_stat = exptparams['TrialObject'][1]['ReferenceHandle'][1]['Jitter']
+        # convoluted indexig into the nested dictionaries ot get Jitter status, sets value to "Off" by default
+        j_stat = exptparams['TrialObject'][1]['ReferenceHandle'][1].get('Jitter', 'Off')
         epoch_rename_map[oldkey] = 'Jitter_{}'.format(j_stat.rstrip())
 
     # get epochs, rename as stated by the map

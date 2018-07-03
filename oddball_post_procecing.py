@@ -1,6 +1,9 @@
 import pandas as pd
 import numpy as np
 import collections
+import os
+import nems.xforms as xforms
+import nems.modelspec as ms
 
 '''
 collection of functions to extract and parse data from a batch of fitted cells
@@ -25,8 +28,15 @@ def flat_dict_to_df(d):
                            orient='index')
     return df
 
+def load_single_modspec(cellid, batch, modelname):
+    '''
+    load the modelspec of an oddball recordign including SSA related metrics within the metadata
+    :param cellid: str
+    :param batch: num
+    :param modelname: str
+    :return:
+    '''
+    uri = '/auto/users/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
+    modelspec = ms.load_modelspec(uri)
 
-
-
-
-
+    return modelspec

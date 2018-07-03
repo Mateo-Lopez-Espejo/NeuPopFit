@@ -141,6 +141,11 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     modelspecs = ctx['modelspecs']
     ms.save_modelspec(modelspecs, my_path)
 
+    nems.uri.save_resource(filepath, json=modelspec)
+
+    save_resource(base_uri + 'modelspec.{:04d}.json'.format(number),
+                  json=modelspec)
+
     if save_in_DB:
         # save in database as well TODO why is saving as single element of modelspec?
         nd.update_results_table(modelspecs[0], preview=None,
