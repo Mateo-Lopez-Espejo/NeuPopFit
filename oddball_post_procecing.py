@@ -42,3 +42,24 @@ def load_single_modspec(cellid, batch, modelname):
     modelspecs = ctx['modelspecs']
 
     return modelspecs
+
+def read_SI(modelspecs, as_DF=False):
+    '''
+    reads a modelspec and returns the ssa index values as a dictionary or a dataframe
+    :param modelspecs: a modelspec data structure
+    :param as_DF: bool, if true returns a dataframe
+    :return: a data structure with valued of ssa index organized by actual/predicted, Jitter On/Off ...ToDo any other category
+             returns values as nested dictionary, or whatever the default of modelspecs is. or a long format dataframe
+    '''
+
+    meta = modelspecs[0][0]['meta']
+    SI = meta['SSA_Index ']
+    if as_DF == True:
+        SI = flatten_to_df(SI)
+
+    return SI
+
+
+def flatten_to_df(nested_dict):
+    # ToDo implement
+    raise NotImplementedError('make mateo implement this this shit lazy ass')
