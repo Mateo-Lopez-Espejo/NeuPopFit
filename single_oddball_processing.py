@@ -5,7 +5,7 @@ import nems.xforms as xforms
 import nems.xform_helper as xhelp
 import nems_db.db as nd
 import logging
-import joblib as jl
+import nems.uri as nuri
 
 
 def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_in_DB=False):
@@ -60,9 +60,6 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     # chekcs for caches, uses if exists, else fits de novo
     destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
         batch, cellid, modelname)
-    # local destination test
-    # destination = '/home/mateo/oddball_results/{0}/{1}/{2}/'.format(
-    #     batch, cellid, modelname)
 
 
     if os.path.exists(destination) and force_refit == False:
@@ -136,15 +133,17 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     ctx, log_xf = xforms.evaluate(xfspec, ctx, start =-1 , stop=None)
 
 
-    # saves modelspecs
+    # re-saves overwriting modelspecs containing the SSA related metrics,
     my_path = '/auto/users/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
+
     modelspecs = ctx['modelspecs']
-    ms.save_modelspec(modelspecs, my_path)
-
-    nems.uri.save_resource(filepath, json=modelspec)
-
-    save_resource(base_uri + 'modelspec.{:04d}.json'.format(number),
-                  json=modelspec)
+    log.info('Saving modelspec(s) to {0} ...'.format(destination))
+    xforms.save_analysis(destination,
+                         recording=ctx['rec'],
+                         modelspecs=modelspecs,
+                         xfspec=xfspec,
+                         figures=ctx['figures'],
+                         log=log_xf)
 
     if save_in_DB:
         # save in database as well TODO why is saving as single element of modelspec?

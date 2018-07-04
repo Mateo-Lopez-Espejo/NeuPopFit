@@ -16,7 +16,8 @@ force_rerun = True
 
 
 batch_cells = nd.get_batch_cells(batch=296).cellid
-batch_cells = ['eno006d-c1']
+# only old cells without jitter status
+batch_cells = [cellid for cellid in batch_cells if cellid[0:3] != 'gus']
 
 for cellid in batch_cells:
     qid,msg = nd.enqueue_single_model(cellid=cellid, batch=batch, modelname=modelname,

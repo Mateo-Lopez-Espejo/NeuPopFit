@@ -293,6 +293,7 @@ def loader_error():
     recording_uri = nw.generate_recording_uri(cellid, batch, loader)
     return recording_uri
 
+
 def oddball_format():
     # load the file
     cellid = 'gus037d-a1'
@@ -332,6 +333,7 @@ def load_cash_rec():
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
 
+
 def single_oddball_processing(cellid = 'gus037d-a1'):
     cellid = cellid
     batch = 296
@@ -339,5 +341,22 @@ def single_oddball_processing(cellid = 'gus037d-a1'):
 
     ctx = sop.single_oddball_processing(cellid, batch, modelname)
     return ctx
+
+
+def load_analysis():
+    destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
+                   296, 'gus037d-a1','stp2_fir2x15_lvl1_basic-nftrial')
+
+    xfspecs, ctx = xforms.load_analysis(destination, eval_model=True)
+    return xfspecs, ctx
+
+def load_modelspec():
+    destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/{3}'.format(
+        296, 'gus037d-a1', 'stp2_fir2x15_lvl1_basic-nftrial', 'modelspec.0000.json')
+
+    modelspecs = ms.load_modelspec(destination)
+
+    return modelspecs
+
 
 # odd_ctx = all_custom_xforms()
