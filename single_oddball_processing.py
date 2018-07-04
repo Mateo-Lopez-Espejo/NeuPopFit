@@ -1,11 +1,9 @@
 import os
 import io
-import nems.modelspec as ms
 import nems.xforms as xforms
 import nems.xform_helper as xhelp
 import nems_db.db as nd
 import logging
-import nems.uri as nuri
 
 
 def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_in_DB=False):
@@ -134,8 +132,6 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
 
     # re-saves overwriting modelspecs containing the SSA related metrics,
-    my_path = '/auto/users/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
-
     modelspecs = ctx['modelspecs']
     log.info('Saving modelspec(s) to {0} ...'.format(destination))
     xforms.save_analysis(destination,

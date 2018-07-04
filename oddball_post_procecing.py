@@ -31,12 +31,14 @@ def flat_dict_to_df(d):
 def load_single_modspec(cellid, batch, modelname):
     '''
     load the modelspec of an oddball recordign including SSA related metrics within the metadata
-    :param cellid: str
-    :param batch: num
-    :param modelname: str
+    :param cellid: str the name of the cell
+    :param batch: num, for oddbal data it is 296
+    :param modelname: str a string of characters describing the model
     :return:
     '''
-    uri = '/auto/users/mateo/oddball_modelspecs/{}-{}-{}'.format(batch, cellid, modelname)
-    modelspec = ms.load_modelspec(uri)
+    source_dir = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
+        batch, cellid, modelname)
+    xforms, ctx = xforms.load_analysis(source_dir, eval_mode=False)
+    modelspecs = ctx['modelspecs']
 
-    return modelspec
+    return modelspecs

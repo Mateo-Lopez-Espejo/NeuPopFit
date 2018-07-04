@@ -126,6 +126,7 @@ def get_superepoch_subset(signal, super_epoch):
     :param super_epoch: None, str or [str,...] with the name/names of the epochs
     :return: a epoch data frame
     '''
+    # ToDo whis is this not workign as intended??
     # checks format of super_epoch
     if isinstance(super_epoch, str):
         super_epoch = [super_epoch]
@@ -449,6 +450,41 @@ def signal_nan_as_zero(signal):
     arr[nan_mask] = 0
     no_nan_signal = signal.rasterize()._modified_copy(arr)
     return no_nan_signal
+
+
+def split_signal_by_file(signal, file_epochs=None):
+    '''
+    takes an oddball signal and a list of epochs names correspondign to the files concatenated in the recording
+    returns signals corresponding to the streches indicated by tge file epochs
+
+    :param signal: and oddball signal
+    :param file_epochs: str, [str,...], None
+    :return: [oddball signal, ...]
+             if file_epochs == None, returns a list with epochs names correspondign to file names
+    '''
+    # checks nature of input
+    if isinstance(file_epochs, list) or file_epochs == None:
+        pass
+    elif isinstance(file_epochs, str):
+        file_epochs = [file_epochs]
+    else:
+        raise TypeError('file_epochs is {}. it must be str or [str, ...]'.format(type(file_epochs)))
+
+    # if file_epochs is None, retunrs names of file epochs
+    if file_epochs == None:
+        regexp = r"\AFILE_\D{3}\d{3}\D\d{2}_p_SSA"
+        file_names = ep.epoch_names_matching(signal.epochs, regexp)
+        if not file_names:
+            raise ValueError('no epochs coresponding to file names')
+        return file_names
+
+    file_signals = {file_name: signal.select_epochs([file_name]) for file_name in file_epochs}
+    file_signals = {file_name:
+                        filesig._modified_copy(data=filesig._data,
+                                                epochs=get_superepoch_subset(filesig,file_name))
+                    for file_name, filesig in file_signals.items()}
+
+    return file_signals
 
 
 # functions working on recordings objects

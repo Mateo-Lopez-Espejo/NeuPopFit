@@ -347,7 +347,7 @@ def load_analysis():
     destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
                    296, 'gus037d-a1','stp2_fir2x15_lvl1_basic-nftrial')
 
-    xfspecs, ctx = xforms.load_analysis(destination, eval_model=True)
+    xfspecs, ctx = xforms.load_analysis(destination, eval_model=False)
     return xfspecs, ctx
 
 def load_modelspec():
@@ -358,5 +358,11 @@ def load_modelspec():
 
     return modelspecs
 
+def split_signal_by_file():
+    ctx = ox.load_oddball('gus019c-a1', )
+    sig = ctx['rec']['resp'].rasterize()
+    filenames = of.split_signal_by_file(sig)
+    file_signals = of.split_signal_by_file(sig, filenames)
+    return file_signals
 
 # odd_ctx = all_custom_xforms()
