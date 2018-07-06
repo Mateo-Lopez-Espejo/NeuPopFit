@@ -61,7 +61,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
 
     if os.path.exists(destination) and force_refit == False:
-        # loads xfspecs and  ctx, do not reevalueate
+        # loads xfspecs and  ctx
         xfspec, ctx = xforms.load_analysis(destination, eval_model=True) # ToDo why this evalmode does not refit for so long
 
     elif not os.path.exists(destination) or force_refit == True:
@@ -89,16 +89,6 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
         # adds sumary plots ToDo i dont like this plotting, but is necesary to user Save analysisi
         xfspec.append(['nems.xforms.plot_summary',    {}])
-
-        # Create a log stream set to the debug level; add it as a root log handler
-        log_stream = io.StringIO()
-        ch = logging.StreamHandler(log_stream)
-        ch.setLevel(logging.DEBUG)
-        fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        formatter = logging.Formatter(fmt)
-        ch.setFormatter(formatter)
-        rootlogger = logging.getLogger()
-        rootlogger.addHandler(ch)
 
         #### evaluates preprocessing and fitting ####
         ctx, log_xf = xforms.evaluate(xfspec)

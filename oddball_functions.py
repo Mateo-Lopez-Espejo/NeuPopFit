@@ -453,6 +453,9 @@ def signal_nan_as_zero(signal):
 
 
 def split_signal_by_file(signal, file_epochs=None):
+
+    # Todo implemente within the issue of multiple frequency pairs.
+    # Look at cells: 'gus019c-a1', 'gus019c-b1', 'gus019c-b2', 'gus019c-b3'
     '''
     takes an oddball signal and a list of epochs names correspondign to the files concatenated in the recording
     returns signals corresponding to the streches indicated by tge file epochs

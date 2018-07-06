@@ -15,6 +15,7 @@ import nems.recording as recording
 
 import oddball_functions as of
 import oddball_xforms as ox
+import oddball_post_procecing as opp
 import single_oddball_processing as sop
 
 # reload modules just in case??
@@ -350,19 +351,39 @@ def load_analysis():
     xfspecs, ctx = xforms.load_analysis(destination, eval_model=False)
     return xfspecs, ctx
 
-def load_modelspec():
-    destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/{3}'.format(
-        296, 'gus037d-a1', 'stp2_fir2x15_lvl1_basic-nftrial', 'modelspec.0000.json')
 
-    modelspecs = ms.load_modelspec(destination)
+def load_modelspec():
+    cellid = 'gus037d-a1'
+    batch = 296
+    modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
+
+    modelspecs = opp.load_single_modspec(cellid, batch, modelname)
 
     return modelspecs
 
+
 def split_signal_by_file():
+
+
     ctx = ox.load_oddball('gus019c-a1', )
     sig = ctx['rec']['resp'].rasterize()
     filenames = of.split_signal_by_file(sig)
     file_signals = of.split_signal_by_file(sig, filenames)
     return file_signals
+
+
+def single_specs_to_DF():
+    cellid = 'gus037d-a1'
+    batch = 296
+    modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
+
+    DF = opp.single_specs_to_DF(cellid,batch,modelname)
+
+    return DF
+
+def batch_specs_to_DF():
+    DF = opp.batch_specs_to_DF(296, 'stp2_fir2x15_lvl1_basic-nftrial')
+    return DF
+
 
 # odd_ctx = all_custom_xforms()
