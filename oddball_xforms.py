@@ -108,13 +108,12 @@ def mask_by_jitter(rec, Jitter_set, **context):
     ep_names  = rec.epochs.name.unique()
     if Jitter_set in ep_names:
         pass
-    elif Jitter_set not in ep_names and 'Jitter_Off' in ep_names:
-        mesg = '{} not in epochs, seting to default: Jitter_Off'.format(Jitter_set)
-        warnings.warn(Warning(mesg))
-    else:
-        mesg = 'No Jitter related epochs in the recording'
+    elif Jitter_set not in ep_names :
+        mesg = 'recording does noc contain {} in epochs'.format(Jitter_set)
         raise ValueError(mesg)
-
+    else:
+        mesg = 'WTF??, the universe is broken.'
+        raise ValueError(mesg)
 
     rec = rec.create_mask(epoch=Jitter_set)
 
