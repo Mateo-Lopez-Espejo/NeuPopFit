@@ -7,7 +7,7 @@ import logging
 import oddball_xforms as ox
 
 
-def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_in_DB=False):
+def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_in_DB=False):
     '''
 
     full a oddball analisis: loads data
@@ -27,7 +27,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     :param cellid: str of cell id
     :param batch: batch number under stephen convention, default is SSA batch 296
     :param modelname: str defining the modules comprising the model.
-    :param force_refit: Bool. if true fits the model regardless of cached values, replaces cached values
+    :param force_rerun: Bool. if true fits the model regardless of cached values, replaces cached values
     :param save_in_DB: ??? TODO what is this doing
     :return: experimetn context final_ctx. contains recordings and modelspecs
     '''
@@ -57,18 +57,18 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
             'loader': loader, 'fitkey': fitkey, 'modelspecname': modelspecname,
             'username': 'svd', 'labgroup': 'lbhb', 'public': 1,
             'githash': os.environ.get('CODEHASH', ''),
-            'recording': loader, 'est-set':est_set , 'val_set':val_set}
+            'recording': loader, 'est_set':est_set , 'val_set':val_set}
 
     # chekcs for caches, uses if exists, else fits de novo
     destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
         batch, cellid, modelname)
 
 
-    if os.path.exists(destination) and force_refit == False:
+    if os.path.exists(destination) and force_rerun == False:
         # loads xfspecs and  final_ctx
         xfspec, ctx = xforms.load_analysis(destination, eval_model=True) # ToDo why this evalmode does not refit for so long
 
-    elif not os.path.exists(destination) or force_refit == True:
+    elif not os.path.exists(destination) or force_rerun == True:
         # generate xfspec, which defines sequence of events to load data,
         # 1. Preprosesign and fit
         xfspec = list()
@@ -89,19 +89,19 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
         # adds jackknife, fitter and prediction
         log.info("n-fold fitting...")
-        tfolds = 2 # TODO change back to 5
+        tfolds = 5
         xfspec.append(['nems.xforms.mask_for_jackknife',
                        {'njacks': tfolds, 'epoch_name': 'TRIAL'}])
 
         ## caches the fitted values, so they can be reused for different validations
         midway_cache = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
                         batch, cellid, modelname.rsplit('_', 1)[0])
-        if os.path.exists(midway_cache) and force_refit == False:
+        if os.path.exists(midway_cache) and force_rerun == False:
             # loads xfspecs and  final_ctx
             xfspec, ctx = xforms.load_analysis(midway_cache,
                                                eval_model=True)  # ToDo why this evalmode does not refit for so long
 
-        elif not os.path.exists(midway_cache) or force_refit == True:
+        elif not os.path.exists(midway_cache) or force_rerun == True:
             # adds fitter
             xfspec.append(['nems.xforms.fit_nfold', {}])
 

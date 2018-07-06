@@ -28,3 +28,5 @@ for cellid, modelname in itt.product(batch_cells, modelnames):
     qid,msg = nd.enqueue_single_model(cellid=cellid, batch=batch, modelname=modelname,
                                   user=user, session=None, force_rerun=force_rerun,
                                   executable_path=executable_path, script_path=script_path)
+
+    print(msg)
