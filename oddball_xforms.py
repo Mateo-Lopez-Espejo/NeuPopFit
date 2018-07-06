@@ -110,7 +110,7 @@ def mask_by_jitter(rec, Jitter_set, **context):
         pass
     elif Jitter_set not in ep_names and 'Jitter_Off' in ep_names:
         mesg = '{} not in epochs, seting to default: Jitter_Off'.format(Jitter_set)
-        warnings.warn(warnings(mesg))
+        warnings.warn(Warning(mesg))
     else:
         mesg = 'No Jitter related epochs in the recording'
         raise ValueError(mesg)
