@@ -52,11 +52,9 @@ if __name__ == '__main__':
     cellid = sys.argv[1]
     batch = sys.argv[2]
     modelname = sys.argv[3]
-    force_rerun = sys.argv[6]
-
 
     print("Running single_oddball_processing with parameters ({0},{1},{2})".format(cellid, batch, modelname))
-    ctx = sop.single_oddball_processing(cellid, batch, modelname, force_rerun=force_rerun, save_in_DB=False)
+    ctx = sop.single_oddball_processing(cellid, batch, modelname, force_rerun=True, save_in_DB=False)
 
     # Mark completed in the queue. Note that this should happen last thing!
     # Otherwise the job might still crash after being marked as complete.

@@ -16,7 +16,7 @@ user = 'Mateo'
 force_rerun = True
 
 batch_cells = nd.get_batch_cells(batch=296).cellid
-batch_cells = ['gus037d-a1']
+# batch_cells = ['gus037d-a1']
 loaders = ['odd']
 ests = vals = ['jof', 'jon']
 modelnames = ['{}_stp2_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
