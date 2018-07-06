@@ -32,8 +32,12 @@ debuger.... Lets hope I can keep, my word.
 
 # test files. the paths will be different between my desktop and laptop.
 this_script_dir = os.path.dirname(os.path.realpath(__file__))
-oddball_test_cache_root = '{}/pickles/test_cash'.format(this_script_dir)
-fast_cache = '{}_gus037d-a1_296_stp2_fir2x15_lvl1_basic-nftrial'.format(oddball_test_cache_root)
+oddball_test_cache_root = '{}/pickles'.format(this_script_dir)
+final_ctx_cache = os.path.normcase('{}/final_ctx'.
+                                   format(oddball_test_cache_root))
+
+initial_ctx_cache = os.path.normcase('{}/initial_ctx'.
+                                     format(oddball_test_cache_root))
 
 def test():
     # totally useless function but i learned howe to unpack a dictionary as local variables:
@@ -45,19 +49,19 @@ def test():
     return ddd
 
 
-def ctx():
-    ctx = jl.load(fast_cache)
+def final_ctx():
+    ctx = jl.load(final_ctx_cache)
     return ctx
 
 
 def rec():
-    test_ctx = jl.load(fast_cache)
+    test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     return rec
 
 
 def sig():
-    ctx = test_ctx = jl.load(fast_cache)
+    ctx = test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     return sig
@@ -104,7 +108,7 @@ def oldcells():
 
 
 def set_signal_oddball_epochs():
-    test_ctx = jl.load(fast_cache)
+    test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     odd_sig = of.set_signal_oddball_epochs(sig)
@@ -113,7 +117,7 @@ def set_signal_oddball_epochs():
 
 
 def get_superepoch_subset():
-    ctx = test_ctx = jl.load(fast_cache)
+    ctx = test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     sig.add_epoch('test_epoch_1', np.array([[0, 101]]))
@@ -125,7 +129,7 @@ def get_superepoch_subset():
 
 
 def get_signal_SI():
-    test_ctx = jl.load(fast_cache)
+    test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     SI = of.get_signal_SI(sig, None)
@@ -133,7 +137,7 @@ def get_signal_SI():
 
 
 def get_signal_activity():
-    test_ctx = jl.load(fast_cache)
+    test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
     act = of.get_signal_activity(sig, None)
@@ -238,8 +242,13 @@ def baphy_load():
     return rec
 
 
+def initial_ctx():
+    ctx = jl.load(initial_ctx_cache)
+    return ctx
+
+
 def SI_metrics():
-    ctx = jl.load(fast_cache)
+    ctx = jl.load(final_ctx_cache)
 
     xfa = ['oddball_xforms.calculate_oddball_metrics', {'sub_epoch': 'Stim', 'baseline': 'silence'},
            ['val', 'modelspecs'], ['modelspecs']]
@@ -385,5 +394,24 @@ def batch_specs_to_DF():
     DF = opp.batch_specs_to_DF(296, 'stp2_fir2x15_lvl1_basic-nftrial')
     return DF
 
+def fast_set_jitter_epochs():
+    ctx = initial_ctx()
+    rec = ctx['rec']
 
-# odd_ctx = all_custom_xforms()
+    for key, signal in rec.signals.items():
+        signal = signal.rasterize()
+        epochs = signal.epochs.copy()
+        epochs.loc[epochs.name == 'FILE_gus037d03_p_SSA', ['name']] = 'Jitter_Off'
+        epochs.loc[epochs.name == 'FILE_gus037d04_p_SSA', ['name']] = 'Jitter_On'
+
+        sig = signal._modified_copy(signal._data, epochs = epochs)
+        rec[key] = sig
+
+    return rec
+
+
+def mask_one_jitter():
+    rec = fast_set_jitter_epochs()
+    newrec = rec.create_mask(epoch='Jitter_On')
+
+    return newrec

@@ -28,7 +28,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     :param modelname: str defining the modules comprising the model.
     :param force_refit: Bool. if true fits the model regardless of cached values, replaces cached values
     :param save_in_DB: ??? TODO what is this doing
-    :return: experimetn context ctx. contains recordings and modelspecs
+    :return: experimetn context final_ctx. contains recordings and modelspecs
     '''
 
     # cellid = 'gus037d-a1'
@@ -61,7 +61,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
 
 
     if os.path.exists(destination) and force_refit == False:
-        # loads xfspecs and  ctx
+        # loads xfspecs and  final_ctx
         xfspec, ctx = xforms.load_analysis(destination, eval_model=True) # ToDo why this evalmode does not refit for so long
 
     elif not os.path.exists(destination) or force_refit == True:

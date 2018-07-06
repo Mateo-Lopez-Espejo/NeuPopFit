@@ -45,7 +45,7 @@ def save_oddball_modelspecs(ctx):
 
 def cache_fitted_context(ctx):
     '''
-    creates a temporal cache with the entire ctx already fitted, so refitting is not required
+    creates a temporal cache with the entire final_ctx already fitted, so refitting is not required
     for calculation of postprocessing metrics
 
     :param ctx: the context output of a chain of xpform operations
@@ -70,9 +70,9 @@ def cache_fitted_context(ctx):
 
     filepath = '{}/{}'.format(filepath, modelname)
 
-    print('saving ctx...')
+    print('saving final_ctx...')
     jl.dump(ctx, filepath)
-    print('saved ctx')
+    print('saved final_ctx')
 
     return None
 
@@ -84,7 +84,7 @@ def load_from_cache(cellid, batch, modelname):
     :param cellid: str e.g. 'gus037d-a1'
     :param batch: int, svc batch systems e.g. 296 for ssa
     :param modelanem: str. chain of model arguments e.g. 'env100pt_stp2_fir2x15_lvl1_basic-nftrial'
-    :return: ctx, dict. contains recordings and modelspecs
+    :return: final_ctx, dict. contains recordings and modelspecs
     '''
 
     filepath = '{}/{}/{}/{}'.format(cache_path ,batch, cellid, modelname)

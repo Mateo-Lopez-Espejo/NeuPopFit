@@ -11,11 +11,11 @@ xfa in my case will have 4 possitions:
       the above funtions e.g. 'oddball_xforms.stim_as_rasterized_point_process'
 1.    a dictionary with the arguments for the xform function. in the above example, no arguments {}
       in the case of 'oddball_xforms.calculate_oddball_metrics' probably {'sub_epoch': ['Stim', 'PostStimSilence']}
-2.    list of keys to pull elements from ctx and use as arguments in the function defined ien 0. in the case of
+2.    list of keys to pull elements from final_ctx and use as arguments in the function defined ien 0. in the case of
       'oddball_xforms.calculate_oddball_metrics' ['val', 'modelspecs'] as the validation subsed used to calculate the
       metrics and the modelspecs dictionary to store such values
 3.    list of key for the output arguments. number o keys must be equal to number of function outputs. This keys are used
-      to create new o replace existing values in the ctx input dictionary.
+      to create new o replace existing values in the final_ctx input dictionary.
 '''
 
 def stim_as_rasterized_point_process(rec, scaling, **context):
