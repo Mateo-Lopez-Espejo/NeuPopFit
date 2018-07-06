@@ -2,7 +2,9 @@ import oddball_functions as of
 import oddball_db as od
 import nems_db.baphy as nb
 import nems.recording as recording
-
+import warnings
+import nems.xforms as xforms
+import os
 
 '''
 This is here Just for reference to help me figure out how xfomrms are working
@@ -82,4 +84,70 @@ def load_oddball(cellid, recache=False, **context):
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
 
+
+def mask_by_jitter(rec, Jitter_set, **context):
+    '''
+    # ToDO document
+    :param rec:
+    :param Jitter_set:
+    :param context:
+    :return:
+    '''
+
+    if Jitter_set is 'jal':
+        return {'rec': rec}
+    elif Jitter_set in {'jof', 'jon', 'jal'}:
+        map = {'jof': 'Jitter_Off',
+               'jon': 'Jitter_On',
+               'jal': 'Jitter_Both'}
+
+        Jitter_set = map[Jitter_set]
+
+
+    # checks that jitter epochs exists, if only Jitter Off, set to default and raise warning
+    ep_names  = rec.epochs.name.unique()
+    if Jitter_set in ep_names:
+        pass
+    elif Jitter_set not in ep_names and 'Jitter_Off' in ep_names:
+        mesg = '{} not in epochs, seting to default: Jitter_Off'.format(Jitter_set)
+        warnings.warn(warnings(mesg))
+    else:
+        mesg = 'No Jitter related epochs in the recording'
+        raise ValueError(mesg)
+
+
+    rec = rec.create_mask(epoch=Jitter_set)
+
+    return {'rec': rec}
+
+
+def save_analysis(destination,
+                  recording,
+                  modelspecs,
+                  xfspec,
+                  figures,
+                  log,
+                  add_tree_path=False):
+    '''Save an analysis file collection to a particular destination.'''
+    if add_tree_path:
+        treepath = xforms.tree_path(recording, modelspecs, xfspec)
+        base_uri = os.path.join(destination, treepath)
+    else:
+        base_uri = destination
+
+    base_uri = base_uri if base_uri[-1] == '/' else base_uri + '/'
+    xfspec_uri = base_uri + 'xfspec.json'  # For attaching to modelspecs
+
+    for number, modelspec in enumerate(modelspecs):
+        xforms.set_modelspec_metadata(modelspec, 'xfspec', xfspec_uri)
+        xforms.save_resource(base_uri + 'modelspec.{:04d}.json'.format(number),
+                      json=modelspec)
+
+    if figures is not None:
+        for number, figure in enumerate(figures):
+            xforms.save_resource(base_uri + 'figure.{:04d}.png'.format(number),
+                          data=figure)
+    xforms.save_resource(base_uri + 'log.txt', data=log)
+    xforms.save_resource(xfspec_uri, json=xfspec)
+    return {'savepath': base_uri}
 

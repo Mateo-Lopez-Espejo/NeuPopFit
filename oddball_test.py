@@ -390,9 +390,11 @@ def single_specs_to_DF():
 
     return DF
 
+
 def batch_specs_to_DF():
     DF = opp.batch_specs_to_DF(296, 'stp2_fir2x15_lvl1_basic-nftrial')
     return DF
+
 
 def fast_set_jitter_epochs():
     ctx = initial_ctx()
@@ -413,5 +415,17 @@ def fast_set_jitter_epochs():
 def mask_one_jitter():
     rec = fast_set_jitter_epochs()
     newrec = rec.create_mask(epoch='Jitter_On')
-
     return newrec
+
+def est_val_test(cellid='gus037d-a1', est='jon', val='jof'):
+
+    cellid = cellid
+    batch = 296
+    modelname = 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(est, val)
+
+    ctx = sop.single_oddball_processing(cellid, batch, modelname)
+    return ctx
+
+
+
+

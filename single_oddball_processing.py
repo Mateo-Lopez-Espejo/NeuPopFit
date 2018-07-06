@@ -4,6 +4,7 @@ import nems.xforms as xforms
 import nems.xform_helper as xhelp
 import nems_db.db as nd
 import logging
+import oddball_xforms as ox
 
 
 def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_in_DB=False):
@@ -44,16 +45,19 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
     # parse modelname
     kws = modelname.split("_")
     # ToDo, is this good practice with the loader? it should be included in modelspec
-    loader = 'OddballLoader'
-    modelspecname = "_".join(kws[0:-1])
-    fitkey = kws[-1]
+    loader = kws[0] #'OddballLoader'
+    modelspecname = "_".join(kws[1:4])
+    fitkey = kws[-3]
+    est_set = kws[-2].split('-')[1]
+    val_set = kws[-1].split('-')[1]
+
 
     # figure out some meta data to save in the model spec
     meta = {'batch': batch, 'cellid': cellid, 'modelname': modelname,
             'loader': loader, 'fitkey': fitkey, 'modelspecname': modelspecname,
             'username': 'svd', 'labgroup': 'lbhb', 'public': 1,
             'githash': os.environ.get('CODEHASH', ''),
-            'recording': loader}
+            'recording': loader, 'est-set':est_set , 'val_set':val_set}
 
     # chekcs for caches, uses if exists, else fits de novo
     destination = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
@@ -80,8 +84,49 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
         xfspec.append(['nems.xforms.init_from_keywords',
                        {'keywordstring': modelspecname, 'meta': meta}])
 
+        # masks by jitter status
+        xfspec.append(['oddball_xforms.mask_by_jitter', {'Jitter_set': est_set}])
+
         # adds jackknife, fitter and prediction
-        xfspec.extend(xhelp.generate_fitter_xfspec(fitkey))
+        log.info("n-fold fitting...")
+        tfolds = 2 # TODO change back to 5
+        xfspec.append(['nems.xforms.mask_for_jackknife',
+                       {'njacks': tfolds, 'epoch_name': 'TRIAL'}])
+
+        ## caches the fitted values, so they can be reused for different validations
+        midway_cache = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
+                        batch, cellid, modelname.rsplit('_', 1)[0])
+        if os.path.exists(midway_cache) and force_refit == False:
+            # loads xfspecs and  final_ctx
+            xfspec, ctx = xforms.load_analysis(midway_cache,
+                                               eval_model=True)  # ToDo why this evalmode does not refit for so long
+
+        elif not os.path.exists(midway_cache) or force_refit == True:
+            # adds fitter
+            xfspec.append(['nems.xforms.fit_nfold', {}])
+
+            # evaluates for chaching
+            ctx, log_xf = xforms.evaluate(xfspec)
+
+            modelspecs = ctx['modelspecs']
+            modelspecs[0][0]['meta']['modelpath'] = midway_cache
+            modelspecs[0][0]['meta']['figurefile'] = midway_cache + 'figure.0000.png'
+
+            # save results Todo figure out the good way of saving stuff
+            log.info('Saving modelspec(s) to {0} ...'.format(midway_cache))
+            ox.save_analysis(midway_cache,
+                                 recording=ctx['rec'],
+                                 modelspecs=modelspecs,
+                                 xfspec=xfspec,
+                                 figures=None,
+                                 log=log_xf)
+
+        # sets validation mask
+        xfspec.append(['oddball_xforms.mask_by_jitter', {'Jitter_set': val_set}])
+
+        # adds predictor
+        xfspec.append(['nems.xforms.predict', {}])
+
 
         # add metrics correlation
         xfspec.append(['nems.analysis.api.standard_correlation', {},
@@ -91,7 +136,7 @@ def single_oddball_processing(cellid, batch, modelname, force_refit=False, save_
         xfspec.append(['nems.xforms.plot_summary',    {}])
 
         #### evaluates preprocessing and fitting ####
-        ctx, log_xf = xforms.evaluate(xfspec)
+        ctx, log_xf = xforms.evaluate(xfspec,ctx, start=-4, stop=None)
 
         # caches analisys
         modelspecs = ctx['modelspecs']

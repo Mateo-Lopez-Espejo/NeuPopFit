@@ -6,6 +6,7 @@ import nems.xforms as xforms
 import nems.modelspec as ms
 import nems_db.db as nd
 import warnings
+import itertools as itt
 
 
 '''
@@ -191,23 +192,21 @@ def single_specs_to_DF(cellid, batch, modelname):
 
 ### script like fuinctions for single oddball experiments
 
-def batch_specs_to_DF(batch, modelname):
+def batch_specs_to_DF(batch, modelnames):
     '''
     organizes relevant metadata from all cells in a batch into a dataframe
 
     :param batch: int, batch number, 296 in case of oddball
-    :param modelname: chain of string specifying the model architecture.
+    :param modelname: list of modelnames, each modelname is a chain of string specifying the model architecture.
     :return: a data frame in long format. all numerical values are in a single column, all other columns correspond to tags
 
     '''
 
     # get a list of the cells in the batch
-
     batch_cells = nd.get_batch_cells(batch=batch).cellid
-
     # gets the single cells data frames and adds cellid
     single_cell_dfs = list()
-    for cellid in batch_cells:
+    for cellid, modelname in itt.product(batch_cells, modelnames):
         try:
             df = single_specs_to_DF(cellid, batch, modelname)
         except FileNotFoundError:
