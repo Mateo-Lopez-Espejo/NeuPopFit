@@ -392,7 +392,8 @@ def single_specs_to_DF():
 
 
 def batch_specs_to_DF():
-    DF = opp.batch_specs_to_DF(296, 'stp2_fir2x15_lvl1_basic-nftrial')
+    modelnames = opp.get_modelnames()
+    DF = opp.batch_specs_to_DF(296, modelnames)
     return DF
 
 
@@ -416,6 +417,7 @@ def mask_one_jitter():
     rec = fast_set_jitter_epochs()
     newrec = rec.create_mask(epoch='Jitter_On')
     return newrec
+
 
 def est_val_test(cellid='gus037d-a1', est='jon', val='jof'):
 

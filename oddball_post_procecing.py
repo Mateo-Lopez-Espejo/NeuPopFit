@@ -8,15 +8,14 @@ import nems_db.db as nd
 import warnings
 import itertools as itt
 
-
 '''
 collection of functions to extract and parse data from a batch of fitted cells
 '''
 
+
 ### base low level functions
 
 def get_source_dir(cellid, batch, modelname):
-
     source_dir = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
         batch, cellid, modelname)
 
@@ -38,13 +37,14 @@ def load_single_modspec(cellid, batch, modelname):
 
     return modelspecs
 
+
 def flatten_dict(d):
     def items():
         for key, value in d.items():
             if isinstance(value, dict):
                 for subkey, subvalue in flatten_dict(value).items():
                     yield key + "&" + subkey, subvalue
-            elif isinstance(value, (int, float, str, )):
+            elif isinstance(value, (int, float, str,)):
                 yield key, value
             else:
                 mesg = 'object at {} is type {}'.format(key, type(value))
@@ -79,7 +79,7 @@ def dict_to_df(nested_dict, column_names=None):
 
     # renames the multyindex level and values columm
     if isinstance(column_names, list):
-        df.index.rename(column_names,level=None, inplace=True)
+        df.index.rename(column_names, level=None, inplace=True)
     elif column_names is None:
         mesg = 'give names to the columns to avoid future headaches!'
         warnings.warn(Warning(mesg))
@@ -92,7 +92,6 @@ def dict_to_df(nested_dict, column_names=None):
 
 
 def get_from_meta(modelspecs, key, as_DF=False, column_names=None):
-
     '''
        reads a modelspec and returns the ssa index values as a dictionary or a dataframe
        :param modelspecs: a modelspec data structure
@@ -107,6 +106,7 @@ def get_from_meta(modelspecs, key, as_DF=False, column_names=None):
         metrics = dict_to_df(metrics, column_names)
 
     return metrics
+
 
 def get_stp_values(modelspecs):
     '''
@@ -142,6 +142,43 @@ def get_stp_values(modelspecs):
     return stp
 
 
+def get_est_val_sets(modelspecs):
+    meta = modelspecs[0][0]['meta']
+
+    if 'est_set' not in meta.keys() and 'val_set' not in meta.keys():
+        mesg = 'est val subsets not defined, asuming full recording for both'
+        warnings.warn(Warning(mesg))
+
+        meta['est_set'] = 'jal'
+        meta['val_set'] = 'jal'
+
+    elif 'est_set' in meta.keys() and 'val_set' not in meta.keys():
+        raise ValueError('est set defined, val set undefined')
+    elif 'est_set' not in meta.keys() and 'val_set' in meta.keys():
+        raise ValueError('val set defines, est set undefined ')
+    elif 'est_set' in meta.keys() and 'val_set' in meta.keys():
+        pass
+    else:
+        raise ValueError('WTF? the universe is broken')
+
+    est_val_sets = {'est_set': meta['est_set'], 'val_set': meta['val_set']}
+
+    return est_val_sets
+
+
+def get_corcoef(modelspecs):
+    meta_key_list = ['ll_fit', 'll_test', 'mse_fit', 'mse_test', 'r_ceiling', 'r_fit', 'r_floor', 'r_test']
+
+    meta = modelspecs[0][0]['meta']
+
+    corcoef_dict = dict.fromkeys(meta_key_list)
+
+    for key in corcoef_dict.keys():
+        corcoef_dict[key] = meta[key]
+
+    return corcoef_dict
+
+
 ### script like functions for single oddball experiments
 
 def single_specs_to_DF(cellid, batch, modelname):
@@ -151,11 +188,8 @@ def single_specs_to_DF(cellid, batch, modelname):
     pull all relevant values form modelspecs, organizes in a long format dataframe
 
     :param cellid: str single cell identifier
-
     :param batch: int, 296 for oddball experiments
-
     :param modelname: str, chain of str corresponding to model architecture.
-
     :return: a data frame in long format with  all the pertinent data.
 
     '''
@@ -177,20 +211,43 @@ def single_specs_to_DF(cellid, batch, modelname):
     # gets the values of fitted stp parameters
 
     stp_DF = dict_to_df(get_stp_values(modelspecs), column_names=['parameter', 'stream'])
-    stp_DF['Jitter'] = 'Jitter_Both'
+    # stp_DF['Jitter'] = 'Jitter_Both'
     frames.append(stp_DF)
 
-    # add more frames to the DF ??
+    # get correlation coefficient values
 
+    corcoef_DF = dict_to_df(get_corcoef(modelspecs), column_names=['parameter'])
+    frames.append(corcoef_DF)
+
+    # add more frames to the DF ??
 
     # concatenates frames
 
     DF = pd.concat(frames, sort=True)
 
+    # add tags to the whole DF
+    est_val_sets = get_est_val_sets(modelspecs)
+
+    for key, val in est_val_sets.items():
+        DF[key] = val
+
     return DF
 
 
-### script like fuinctions for single oddball experiments
+### script like fuinctions for batches####
+
+def get_modelnames():
+    # ToDo dont forget to keep adding modelspecs
+
+    loaders = ['odd']
+    ests = vals = ['jof', 'jon']
+    modelnames = ['{}_stp2_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
+                  loader, est, val in itt.product(loaders, ests, vals)]
+
+    modelnames.append('stp2_fir2x15_lvl1_basic-nftrial')
+
+    return modelnames
+
 
 def batch_specs_to_DF(batch, modelnames):
     '''
@@ -205,30 +262,40 @@ def batch_specs_to_DF(batch, modelnames):
     # get a list of the cells in the batch
     batch_cells = nd.get_batch_cells(batch=batch).cellid
     # gets the single cells data frames and adds cellid
-    single_cell_dfs = list()
-    for cellid, modelname in itt.product(batch_cells, modelnames):
-        try:
-            df = single_specs_to_DF(cellid, batch, modelname)
-        except FileNotFoundError:
-            mesg = 'file not found: {}/xfspec.json'.format(get_source_dir(cellid, batch, modelname))
-            warnings.warn(Warning(mesg))
-            continue
-        except:
-            mesg = 'WTF just happened with {}'.format(cellid)
-            warnings.warn(Warning(mesg))
-            continue
 
+    models_DF = list()
 
-        df['cellid'] = cellid
-        single_cell_dfs.append(df)
+    for modelname in modelnames:
 
-    DF = pd.concat(single_cell_dfs, sort=True)
+        cells_in_model = list()
 
-    # adds modelname
-    DF['modelname'] = modelname
+        for cellid in batch_cells:
+            try:
+                df = single_specs_to_DF(cellid, batch, modelname)
+            except FileNotFoundError:
+                # mesg = 'file not found: {}/xfspec.json'.format(get_source_dir(cellid, batch, modelname))
+                # warnings.warn(Warning(mesg))
+                continue
+            except:
+                mesg = 'WTF just happened with {} {}'.format(cellid, modelname)
+                warnings.warn(Warning(mesg))
+                continue
+
+            df['cellid'] = cellid
+            cells_in_model.append(df)
+
+            DF = pd.concat(cells_in_model, sort=True)
+
+        # adds modelname
+        DF['modelname'] = modelname
+
+        models_DF.append(DF)
+
+    DF = pd.concat(models_DF, sort=True)
+
+    DF = DF.reset_index()
 
     return DF
-
 
 
 ### data frame manipulations
@@ -247,3 +314,8 @@ def collapse_jackknife(DF, func=np.mean):
     out_df.value.apply(func, inplace=True)
 
     return out_df
+
+
+def format_as_old(DF):
+    # ToDo implemente
+    return None

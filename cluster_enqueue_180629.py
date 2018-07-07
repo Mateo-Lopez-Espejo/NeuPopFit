@@ -13,7 +13,7 @@ parm2 = batch = 296
 parm3 = modelname = 'stp2_fir2x15_lvl1_basic-nftrial' 
 
 user = 'Mateo'
-force_rerun = False
+force_rerun = True
 
 batch_cells = nd.get_batch_cells(batch=296).cellid
 # batch_cells = ['gus037d-a1']
