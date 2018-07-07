@@ -46,7 +46,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
     kws = modelname.split("_")
     # ToDo, is this good practice with the loader? it should be included in modelspec
     loader = kws[0] #'OddballLoader'
-    modelspecname = "_".join(kws[1:4])
+    modelspecname = "_".join(kws[1:-3])
     fitkey = kws[-3]
     est_set = kws[-2].split('-')[1]
     val_set = kws[-1].split('-')[1]

@@ -128,8 +128,9 @@ def get_single_metadata(cellid, batch):
 
     cell_meta['jitter_status'] = jitter_status
 
-
     df = pd.DataFrame([cell_meta])
+
+    return df
 
 def get_batch_metadata(batch, recache=False):
     '''
