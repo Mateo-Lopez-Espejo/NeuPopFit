@@ -94,7 +94,7 @@ def mask_by_jitter(rec, Jitter_set, **context):
     :return:
     '''
 
-    if Jitter_set is 'jal':
+    if Jitter_set == 'jal':
         return {'rec': rec}
     elif Jitter_set in {'jof', 'jon', 'jal'}:
         map = {'jof': 'Jitter_Off',
