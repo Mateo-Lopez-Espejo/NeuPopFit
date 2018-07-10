@@ -64,7 +64,7 @@ def psth(ctx, sub_epoch=None, super_epoch=None):
 
 
 
-    fig, axes  = plt.subplots(1,2)
+    fig, axes  = plt.subplots(1,2, sharey=True)
 
     axes = np.ravel(axes)
 
@@ -103,7 +103,7 @@ def psth(ctx, sub_epoch=None, super_epoch=None):
 
 
 
-def plot_cell(cellid, modelname, batch=296):
+def cell_psth(cellid, modelname, batch=296):
 
     ctx = odb.load_single_ctx(cellid, batch, modelname)
 

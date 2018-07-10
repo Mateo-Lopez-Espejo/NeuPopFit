@@ -252,19 +252,6 @@ def single_specs_to_DF(cellid, batch, modelname):
 
 ### script like fuinctions for batches####
 
-def get_modelnames():
-    # ToDo dont forget to keep adding modelspecs
-
-    loaders = ['odd']
-    ests = vals = ['jof', 'jon']
-    modelnames = ['{}_stp2_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
-                  loader, est, val in itt.product(loaders, ests, vals)]
-
-    modelnames.append('stp2_fir2x15_lvl1_basic-nftrial')
-
-    return modelnames
-
-
 def batch_specs_to_DF(batch, modelnames):
     '''
     organizes relevant metadata from all cells in a batch into a dataframe
@@ -280,6 +267,9 @@ def batch_specs_to_DF(batch, modelnames):
     # gets the single cells data frames and adds cellid
 
     models_DF = list()
+    no_file_error = list()
+    unexpected_error = list()
+
 
     for modelname in modelnames:
 
@@ -291,10 +281,13 @@ def batch_specs_to_DF(batch, modelnames):
             except FileNotFoundError:
                 # mesg = 'file not found: {}/xfspec.json'.format(get_source_dir(cellid, batch, modelname))
                 # warnings.warn(Warning(mesg))
+                no_file_error.append('{} {}'.format(modelname, cellid))
                 continue
             except:
                 mesg = 'WTF just happened with {} {}'.format(cellid, modelname)
                 warnings.warn(Warning(mesg))
+                unexpected_error.append('{} {}'.format(modelname, cellid))
+
                 continue
 
             df['cellid'] = cellid
@@ -309,13 +302,16 @@ def batch_specs_to_DF(batch, modelnames):
 
         DF['modelname'] = modelname
 
+        DF.dropna(axis=0,subset = ['value'], inplace=True)
+
         models_DF.append(DF)
 
     DF = pd.concat(models_DF, sort=True)
 
     DF = DF.reset_index()
 
-    return DF
+
+    return DF, no_file_error, unexpected_error
 
 
 ### data frame manipulations
@@ -358,5 +354,22 @@ def update_old_format(DF):
                  'U': 'u'}
 
     DF = DF.replace(to_replace = value_map)
+
+    return DF
+
+
+def relevant_from_old_DF(DF):
+
+    DF = update_old_format(DF)
+
+    new_modelnames = ['odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
+                      'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
+
+    DF = DF.loc[DF.modelname.isin(new_modelnames), : ]
+
+    value_map = {'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal': 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal_old',
+                 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal': 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal_old'}
+
+    DF = DF.replace(to_replace=value_map)
 
     return DF

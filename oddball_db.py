@@ -5,6 +5,8 @@ import nems_db.baphy as nb
 import os
 import joblib as jl
 import nems.xforms as xforms
+import numpy as np
+import itertools as itt
 
 # for local pickling
 this_script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -68,6 +70,7 @@ def get_single_metadata(cellid, batch):
 
     return df
 
+
 def get_batch_metadata(batch, recache=False):
     '''
     returns a DF wit metadata of all the cells in a batch. this metadata is relevanta at the moment of decidign what
@@ -103,6 +106,32 @@ def get_batch_metadata(batch, recache=False):
     jl.dump(DF, meta_db_path)
 
     return DF
+
+
+def get_modelnames():
+    # ToDo dont forget to keep adding modelspecs
+    # ToDo make it to import a list of all the modelnames... somehow
+
+    modelnames = list()
+    # first modelname, it should be renamed
+    modelnames.append('stp2_fir2x15_lvl1_basic-nftrial')
+    # null model name
+    modelnames.append('odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
+
+    # different fit eval jitter subsets
+    loaders = ['odd']
+    ests = vals = ['jof', 'jon']
+    modelnames.extend(['{}_stp2_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val)
+                       for loader, est, val in itt.product(loaders, ests, vals)])
+
+    # null and alternative models with stim as envelope
+    modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
+    modelnames.append('odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
+
+
+    modelnames = np.asarray(modelnames)
+
+    return modelnames
 
 
 
