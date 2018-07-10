@@ -18,7 +18,7 @@ force_rerun = True
 
 # define cellids
 batch_cells = nd.get_batch_cells(batch=296).cellid
-batch_cells = ['gus037d-a1']
+# batch_cells = ['gus037d-a1']
 
 # define modelnames e
 loaders = ['odd']
@@ -26,7 +26,8 @@ ests = vals = ['jof', 'jon']
 modelnames = ['{}_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
               loader, est, val in itt.product(loaders, ests, vals)]
 
-modelnames = ['odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal' ]
+modelnames = ['odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
+              'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
 # only old cells without jitter status
 #batch_cells = [cellid for cellid in batch_cells if cellid[0:3] != 'gus']
 

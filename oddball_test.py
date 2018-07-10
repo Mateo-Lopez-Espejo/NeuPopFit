@@ -73,13 +73,6 @@ def old_df():
     return DF
 
 
-def odd_ctx():
-    print('deprecated')
-    filename = '/home/mateo/oddball_analysis/pickles/180621_test_oddball_ctx'
-    ctx = jl.load(filename)
-    return ctx
-
-
 def newcells():
     cellids = ['chn002h-a1', 'chn002h-a2', 'chn004b-a1', 'chn004c-b1', 'chn005d-a1', 'chn005d-c1', 'chn006a-b1',
                'chn008a-c1', 'chn008a-c2', 'chn008b-a1', 'chn008b-b1', 'chn008b-c1', 'chn008b-c2', 'chn008b-c3',
@@ -347,7 +340,7 @@ def load_cash_rec():
 def single_oddball_processing(cellid = 'gus037d-a1'):
     cellid = cellid
     batch = 296
-    modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
+    modelname = 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 
     ctx = sop.single_oddball_processing(cellid, batch, modelname)
     return ctx

@@ -78,7 +78,11 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
                        {'cellid': cellid, 'recache': False}])
 
         # give oddball format: stim as rasterized point process, nan as zeros, oddball epochs, jitter status epochs,
-        xfspec.append(['oddball_xforms.give_oddball_format', {'scaling': 'same'}])
+        if loader == 'odd':
+            as_point_process = True
+        elif loader == 'odd1':
+            as_point_process = False
+        xfspec.append(['oddball_xforms.give_oddball_format', {'scaling': 'same', 'as_point_process': as_point_process}])
 
         # define model architecture
         xfspec.append(['nems.xforms.init_from_keywords',

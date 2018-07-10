@@ -259,8 +259,8 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
         if none, returns the whole REFERENCE epoch, otherwise returns the "sub epoch" contained within REFERENCE
         it should be 'Stim', 'PreStimSilence' or 'PostStimSilence'
     super_epoch: None, str, list of str
-        if none, returns  all REFERENCE possibel, otherwise returns REFERENCES(or sub epochs) contained within super_epoch
-        in the context of the oddbal experiments it should be 'Jitter_ON', 'Jitter_Off' or 'Jitter_Both'
+        if none, returns all REFERENCE events, otherwise returns REFERENCES(or sub epochs) contained within super_epoch
+        in the context of the oddball experiments it should be 'Jitter_ON', 'Jitter_Off' or 'Jitter_Both'
 
     Returns
     -------
@@ -296,26 +296,32 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
             subepoch_matrixes = list()
             for this_subep_name in sub_epoch:
                 composite_name = '{}_{}'.format(this_odd_name, this_subep_name)
-                print(composite_name)
+
                 this_subep_mat = oddball_signal.extract_epoch(composite_name)
-                print('shape: {}'.format(this_subep_mat.shape))
-                subepoch_matrixes.append(this_subep_mat)
+
             # concatenate teh subepochs matrixes across time, i.e. third dimention
             folded_signal[this_odd_name] = np.concatenate(subepoch_matrixes, axis=2)
+
+        # Renames the dictionary key to the original oddball_epoch names
+        folded_signal = {key.rsplit('_', 1)[0]: val for key, val in folded_signal.items()}
 
     else:
         # selects wich subepoch to extract, if any.
         if sub_epoch in sub_epochs_names:
-            oddball_epoch_names = ['{}_{}'.format(this_ep_name, sub_epoch) for this_ep_name in oddball_epoch_names]
+            composite_names = ['{}_{}'.format(this_ep_name, sub_epoch) for this_ep_name in oddball_epoch_names] \
+            # Extract the folded epochs in an orderly dictionary.
+            folded_signal = oddball_signal.extract_epochs(composite_names)
+            # Renames the dictionary key to the original oddball_epoch names
+            folded_signal = {key.rsplit('_', 1)[0]: val for key, val in folded_signal.items()}
+
+
         elif sub_epoch == None:
-            pass
+            # Extract the folded epochs in an orderly dictionary.
+            folded_signal = oddball_signal.extract_epochs(oddball_epoch_names)
         else:
             raise ValueError("sub_epoch has to be None, 'PreStimSilence', 'Stim' or 'PostStimSilence'")
 
-        # Extract the folded epochs in an orderly dictionary.
-        folded_signal = oddball_signal.extract_epochs(oddball_epoch_names)
-        # Renames the dictionary key to the original oddball_epoch names
-        folded_signal = {key.rsplit('_', 1)[0]: val for key, val in folded_signal.items()}
+
 
     return folded_signal
 

@@ -54,14 +54,15 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
     # todo test this beauty
     return modelspecs
 
-def give_oddball_format(rec, scaling, **context):
+def give_oddball_format(rec, scaling, as_point_process=True, **context):
     '''
     a bunch of functions formating signals within the recording for later oddball analysis.
     '''
     rec['resp'] = rec['resp'].rasterize()
     rec['stim'] = rec['stim'].rasterize()
     # sets stim as onset with amplitu ecual as maximum value of original stim
-    rec = of.as_rasterized_point_process(rec, scaling=scaling)
+    if as_point_process is True:
+        rec = of.as_rasterized_point_process(rec, scaling=scaling)
     # changes Nan values in to zero for the 'stim' signal
     rec = of.recording_nan_as_zero(rec, ['stim'])
     # set epochs of Jitter On and Jitter Off

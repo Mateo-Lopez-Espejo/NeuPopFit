@@ -7,6 +7,7 @@ import nems.modelspec as ms
 import nems_db.db as nd
 import warnings
 import itertools as itt
+import oddball_db as odb
 
 '''
 collection of functions to extract and parse data from a batch of fitted cells
@@ -122,7 +123,10 @@ def get_stp_values(modelspecs):
         list: repetition of the same value due to jackknifing
     '''
 
-    # init first dict layer
+    meta =  modelspecs[0][0]['meta']
+    kws = meta['modelspecname'].split('_')
+
+   # init first dict layer
     stp = dict.fromkeys(['tau', 'u'])
     for outerkey, _ in stp.items():
         # init second dict layer
@@ -130,6 +134,18 @@ def get_stp_values(modelspecs):
         # init lists
         for innerkey, _ in stp[outerkey].items():
             stp[outerkey][innerkey] = list()
+
+    # looks for the stp in the model architecture keywords
+    if 'stp2' in kws:
+        position = kws.index('stp2')
+    else:
+        # returns an empty dictionary
+        for outerkey, innerdict in stp.items():
+            for innerkey in innerdict.keys():
+                stp[outerkey][innerkey] = np.nan
+
+        return stp
+
 
     # iterate over each of the estimation subsets
     for jackknife in modelspecs:
@@ -202,7 +218,7 @@ def single_specs_to_DF(cellid, batch, modelname):
     parameters = ['SSA_index', 'activity', ]
     for parameter in parameters:
         # generates a df for each parameter
-        parm_DF = get_from_meta(modelspecs, key=parameter, as_DF=True, column_names=['Jitter', 'act_pred', 'stream'])
+        parm_DF = get_from_meta(modelspecs, key=parameter, as_DF=True, column_names=['Jitter', 'resp_pred', 'stream'])
         # adds parameter column
         parm_DF['parameter'] = parameter
 
@@ -287,6 +303,10 @@ def batch_specs_to_DF(batch, modelnames):
             DF = pd.concat(cells_in_model, sort=True)
 
         # adds modelname
+        # change old modelname to new one, just aesthetic
+        if modelname == 'stp2_fir2x15_lvl1_basic-nftrial':
+            modelname = 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+
         DF['modelname'] = modelname
 
         models_DF.append(DF)
@@ -311,11 +331,32 @@ def collapse_jackknife(DF, func=np.mean):
     '''
 
     out_df = DF.copy()
-    out_df.value.apply(func, inplace=True)
+    out_df['value'] = out_df.value.apply(func)
 
     return out_df
 
 
-def format_as_old(DF):
-    # ToDo implemente
-    return None
+def update_old_format(DF):
+
+    column_map = {'Jitter': 'Jitter',
+                  'model_name': 'modelname',
+                  'values': 'value'}
+
+    DF = DF.rename(columns=column_map)
+
+    value_map = {'On': 'Jitter_On',
+                 'Off': 'Jitter_Off',
+                 'stream0': 'f1',
+                 'stream1': 'f2',
+                 'actual': 'resp',
+                 'predicted': 'pred',
+                 'env100e_fir20_fit01_ssa': 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
+                 'env100e_stp1pc_fir20_fit01_ssa': 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
+                 'SI': 'SSA_index',
+                 'r_est': 'r_est', # not sure what is the equivalent value with the new mse calculation
+                 'Tau': 'tau',
+                 'U': 'u'}
+
+    DF = DF.replace(to_replace = value_map)
+
+    return DF
