@@ -5,6 +5,9 @@ import nems.recording as recording
 import warnings
 import nems.xforms as xforms
 import os
+import nems.modelspec as ms
+import oddball_post_procecing as opp
+
 
 '''
 This is here Just for reference to help me figure out how xfomrms are working
@@ -27,32 +30,6 @@ def stim_as_rasterized_point_process(rec, scaling, **context):
     rec = of.as_rasterized_point_process(rec, scaling=scaling)
     return {'rec': rec}
 
-def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
-    # calculates SSA index and activity index for the validatio. asumes unique validation recording.
-    if len(val) != 1:
-        raise Warning("multiple val recordings, usign the first. Inverse jackknife if recomended before this step")
-
-    val = val[0]
-
-    valid_jitters = {'Jitter_Off', 'Jitter_On', 'Jitter_Both'}
-    if not set(super_epoch).issubset(valid_jitters):
-        raise ValueError("super_epoch must be a subset of {}".format(valid_jitters))
-
-    # update modelspecs with the adecuate metadata, calculates SI and activity for each super_epoch
-    modelspecs[0][0]['meta']['SSA_index'] = dict.fromkeys(super_epoch)
-    modelspecs[0][0]['meta']['activity'] = dict.fromkeys(super_epoch)
-
-    for sup_ep in super_epoch:
-        dict_key = sup_ep
-        if sup_ep == 'Jitter_Both':
-            sup_ep = None
-
-        SI = of.get_recording_SI(val, sub_epoch, super_epoch=sup_ep)
-        modelspecs[0][0]['meta']['SSA_index'][dict_key] = SI
-        RA = of.get_recording_activity(val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
-        modelspecs[0][0]['meta']['activity'][dict_key] = RA
-    # todo test this beauty
-    return modelspecs
 
 def give_oddball_format(rec, scaling, as_point_process=True, **context):
     '''
@@ -151,3 +128,101 @@ def save_analysis(destination,
     xforms.save_resource(xfspec_uri, json=xfspec)
     return {'savepath': base_uri}
 
+
+
+def predict_without_merge(est, val, modelspecs, **context):
+
+    if type(val) is list:
+        # ie, if jackknifing
+        new_est = [ms.evaluate(d, m) for m, d in zip(modelspecs, est)]
+        new_val = [ms.evaluate(d, m) for m, d in zip(modelspecs, val)]
+    else:
+        # Evaluate estimation and validation data
+        new_est = [ms.evaluate(est, m) for m in modelspecs]
+        new_val = [ms.evaluate(val, m) for m in modelspecs]
+
+    return {'est':new_est, 'val': new_val}
+
+
+def merge_val(val, **context):
+
+    if type(val) is list:
+        # ie, if jackknifing
+        new_val = [recording.jackknife_inverse_merge(val)]
+    else:
+        # Evaluate estimation and validation data
+        new_val = val
+
+    return {'val': new_val}
+
+
+def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
+
+    # ToDO this is finally workign, implement and test
+    # calculates SSA index and activity index for each validation set
+    # initialzies two lists of nested dictionaries
+    SI_list = list()
+    RA_list = list()
+
+    for this_val in val:
+
+        this_val = this_val.apply_mask()
+
+        valid_jitters = {'Jitter_Off', 'Jitter_On', 'Jitter_Both'}
+        if not set(super_epoch).issubset(valid_jitters):
+            raise ValueError("super_epoch must be a subset of {}".format(valid_jitters))
+
+        # initializes dictionaries for the superepochs
+        SI_dict = dict.fromkeys(super_epoch)
+        RA_dict = dict.fromkeys(super_epoch)
+
+
+        for sup_ep in super_epoch:
+            dict_key = sup_ep
+            if sup_ep == 'Jitter_Both':
+                sup_ep = None
+
+            SI = of.get_recording_SI(this_val, sub_epoch, super_epoch=sup_ep)
+            SI_dict[dict_key] = SI
+
+            RA = of.get_recording_activity(this_val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
+            RA_dict[dict_key] = RA
+
+        SI_list.append(SI_dict)
+        RA_list.append(RA_dict)
+
+    # tunrs the lists of nested dictionaries into nested dictionaries of lists
+    SI = opp.swap_struct_levels(SI_list)
+    RA = opp.swap_struct_levels(RA_list)
+
+    # update modelspecs with the adecuate metadata
+    modelspecs[0][0]['meta']['SSA_index'] = SI
+    modelspecs[0][0]['meta']['activity'] = RA
+    return modelspecs
+
+
+# def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
+#     # calculates SSA index and activity index for the validatio. asumes unique validation recording.
+#     if len(val) != 1:
+#         raise Warning("multiple val recordings, usign the first. Inverse jackknife if recomended before this step")
+#
+#     val = val[0]
+#
+#     valid_jitters = {'Jitter_Off', 'Jitter_On', 'Jitter_Both'}
+#     if not set(super_epoch).issubset(valid_jitters):
+#         raise ValueError("super_epoch must be a subset of {}".format(valid_jitters))
+#
+#     # update modelspecs with the adecuate metadata, calculates SI and activity for each super_epoch
+#     modelspecs[0][0]['meta']['SSA_index'] = dict.fromkeys(super_epoch)
+#     modelspecs[0][0]['meta']['activity'] = dict.fromkeys(super_epoch)
+#
+#     for sup_ep in super_epoch:
+#         dict_key = sup_ep
+#         if sup_ep == 'Jitter_Both':
+#             sup_ep = None
+#
+#         SI = of.get_recording_SI(val, sub_epoch, super_epoch=sup_ep)
+#         modelspecs[0][0]['meta']['SSA_index'][dict_key] = SI
+#         RA = of.get_recording_activity(val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
+#         modelspecs[0][0]['meta']['activity'][dict_key] = RA
+#     return modelspecs

@@ -3,6 +3,7 @@ import numpy as np
 import nems.xforms as xforms
 import nems_db.db as nd
 import warnings
+import copy
 
 '''
 collection of functions to extract and parse data from a batch of fitted cells
@@ -40,14 +41,23 @@ def flatten_dict(d):
             if isinstance(value, dict):
                 for subkey, subvalue in flatten_dict(value).items():
                     yield key + "&" + subkey, subvalue
-            elif isinstance(value, (int, float, str,)):
-                yield key, value
             else:
-                mesg = 'object at {} is type {}'.format(key, type(value))
-                warnings.warn(Warning(mesg))
                 yield key, value
 
     return dict(items())
+
+
+def unflatten_dict(dictionary):
+    resultDict = dict()
+    for key, value in dictionary.items():
+        parts = key.split("&")
+        d = resultDict
+        for part in parts[:-1]:
+            if part not in d:
+                d[part] = dict()
+            d = d[part]
+        d[parts[-1]] = value
+    return resultDict
 
 
 def dict_to_df(nested_dict, column_names=None):
@@ -87,6 +97,54 @@ def dict_to_df(nested_dict, column_names=None):
     return df
 
 
+def df_to_dict(DF):
+    if len(DF.columns) == 1:
+        if DF.values.size == 1: return DF.values[0][0]
+        return DF.values.squeeze()
+    grouped = DF.groupby(DF.columns[0])
+    d = {k: df_to_dict(g.ix[:, 1:]) for k, g in grouped}
+    return d
+
+
+def df_vals_tolist(DFs):
+    '''
+    froma a list of shape consisten df, retunr a df whos values are a list of the values of each independent df
+    the returned df has the same shape and structure a the original DF.
+    :param DFs:
+    :return:
+    '''
+    df_list = list()
+    for df in DFs:
+        indexed = df.set_index(keys=[col for col in df.columns if col != 'value'])
+        df_list.append(indexed)
+
+    merged = pd.concat(df_list, axis=1, join='outer', sort=True)
+    matrix = merged.values.tolist()
+    merged['as_list'] = matrix
+
+    list_DF = merged['as_list']
+    newDF = list_DF.reset_index()
+
+    newDF = newDF.rename(columns={'as_list': 'value'})
+
+    return newDF
+
+
+def swap_struct_levels(list_of_dicts):
+    # todod for each nested dict, flat dictionary
+    flat_dicts = [flatten_dict(d) for d in list_of_dicts]
+    out_dict = copy.copy(flat_dicts[0])
+
+    for fkey in out_dict.keys():
+        # for each unit compounded key, pool all values in list
+        val_list = [fdict[fkey] for fdict in flat_dicts]
+        out_dict[fkey] = val_list
+
+    out_dict = unflatten_dict(out_dict)
+
+    return out_dict
+
+
 def get_from_meta(modelspecs, key, as_DF=False, column_names=None):
     '''
        reads a modelspec and returns the ssa index values as a dictionary or a dataframe
@@ -118,10 +176,10 @@ def get_stp_values(modelspecs):
         list: repetition of the same value due to jackknifing
     '''
 
-    meta =  modelspecs[0][0]['meta']
+    meta = modelspecs[0][0]['meta']
     kws = meta['modelspecname'].split('_')
 
-   # init first dict layer
+    # init first dict layer
     stp = dict.fromkeys(['tau', 'u'])
     for outerkey, _ in stp.items():
         # init second dict layer
@@ -140,7 +198,6 @@ def get_stp_values(modelspecs):
                 stp[outerkey][innerkey] = np.nan
 
         return stp
-
 
     # iterate over each of the estimation subsets
     for jackknife in modelspecs:
@@ -188,6 +245,24 @@ def get_corcoef(modelspecs):
         corcoef_dict[key] = meta[key]
 
     return corcoef_dict
+
+#### higher level API for lazy pulls ####
+
+def get_si(ctx):
+
+    modelspecs = ctx['modelspecs']
+
+    SI = get_from_meta(modelspecs, 'SSA_index', as_DF=True, column_names=['Jitter', 'resp_pred', 'stream'])
+
+    return SI
+
+def get_ra(ctx):
+
+    modelspecs = ctx['modelspecs']
+
+    RA = get_from_meta(modelspecs, 'activity', as_DF=True, column_names=['Jitter', 'resp_pred', 'stream'])
+
+    return RA
 
 
 #### script like functions for single oddball experiments ####
@@ -265,7 +340,6 @@ def batch_specs_to_DF(batch, modelnames):
     no_file_error = list()
     unexpected_error = list()
 
-
     for modelname in modelnames:
 
         cells_in_model = list()
@@ -297,13 +371,12 @@ def batch_specs_to_DF(batch, modelnames):
 
         DF['modelname'] = modelname
 
-        DF.dropna(axis=0,subset = ['value'], inplace=True)
+        DF.dropna(axis=0, subset=['value'], inplace=True)
 
         models_DF.append(DF)
 
     DF = pd.concat(models_DF, sort=True)
 
     DF = DF.reset_index()
-
 
     return DF, no_file_error, unexpected_error

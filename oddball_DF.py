@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import oddball_post_procecing as opp
 
 #### data frame manipulations ####
 def collapse_jackknife(DF, func=np.mean):
@@ -133,6 +134,15 @@ def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
 
 
     return pivoted
+
+
+def simplify_DF(DF):
+    raise NotImplementedError('just to it')
+
+
+
+
+
 
 
 
