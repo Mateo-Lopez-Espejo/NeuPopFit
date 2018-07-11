@@ -66,7 +66,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
 
     if os.path.exists(destination) and force_rerun == False:
         # loads xfspecs and  final_ctx
-        xfspec, ctx = xforms.load_analysis(destination, eval_model=True) # ToDo why this evalmode does not refit for so long
+        xfspec, ctx = xforms.load_analysis(destination, eval_model=True)
 
     elif not os.path.exists(destination) or force_rerun == True:
         # generate xfspec, which defines sequence of events to load data,
@@ -103,7 +103,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
         if os.path.exists(midway_cache) and force_rerun == False:
             # loads xfspecs and  final_ctx
             xfspec, ctx = xforms.load_analysis(midway_cache,
-                                               eval_model=True)  # ToDo why this evalmode does not refit for so long
+                                               eval_model=True)
 
         elif not os.path.exists(midway_cache) or force_rerun == True:
             # adds fitter
@@ -116,7 +116,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
             modelspecs[0][0]['meta']['modelpath'] = midway_cache
             modelspecs[0][0]['meta']['figurefile'] = midway_cache + 'figure.0000.png'
 
-            # save results Todo figure out the good way of saving stuff
+            # save results
             log.info('Saving modelspec(s) to {0} ...'.format(midway_cache))
             ox.save_analysis(midway_cache,
                                  recording=ctx['rec'],
@@ -136,7 +136,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
         xfspec.append(['nems.analysis.api.standard_correlation', {},
                        ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
 
-        # adds sumary plots ToDo i dont like this plotting, but is necesary to user Save analysisi
+        # adds sumary plots ToDo i dont like this plotting, but is necesary to user Save analysis
         xfspec.append(['nems.xforms.plot_summary',    {}])
 
         #### evaluates preprocessing and fitting ####

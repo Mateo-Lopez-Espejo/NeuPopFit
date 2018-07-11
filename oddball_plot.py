@@ -3,6 +3,7 @@ import oddball_db as odb
 import matplotlib.pyplot as plt
 import numpy as np
 import scikits.bootstrap as bts
+import nems.signal as signal
 
 
 # base plottign functions
@@ -80,7 +81,6 @@ def psth(ctx, sub_epoch=None, super_epoch=None):
                 matrix = resp_pred[outerkey][innerkey]
                 psth = np.nanmean(matrix,axis=0).squeeze()
                 conf_int = conf_dict[outerkey][innerkey]
-                # todo set a better vertical line.
                 onset = (psth.shape[0]/3) * period
                 offset = (psth.shape[0] * 2/3 ) * period
 
@@ -102,6 +102,21 @@ def psth(ctx, sub_epoch=None, super_epoch=None):
     return fig, axes
 
 
+def simulated_stim(recording):
+    # todo generates a snipped of stim,  to use as a cartoon and see the cell predicted response in a better way
+
+    array  = np.array()
+    fs = 100
+    name = 'cartoon_stim'
+    recording = recording
+
+    signal = signal.RasterizedSignal.from_3darray(fs, array, name, recording, epoch_name='TRIAL',
+                     chans=None, meta=None, safety_cheks=True)
+    return signal
+
+
+
+# higher level interface
 
 def cell_psth(cellid, modelname, batch=296):
 

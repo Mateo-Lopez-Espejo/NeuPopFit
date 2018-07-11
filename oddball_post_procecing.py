@@ -1,20 +1,15 @@
 import pandas as pd
 import numpy as np
-import collections
-import os
 import nems.xforms as xforms
-import nems.modelspec as ms
 import nems_db.db as nd
 import warnings
-import itertools as itt
-import oddball_db as odb
 
 '''
 collection of functions to extract and parse data from a batch of fitted cells
 '''
 
 
-### base low level functions
+#### base low level functions ####
 
 def get_source_dir(cellid, batch, modelname):
     source_dir = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
@@ -195,7 +190,7 @@ def get_corcoef(modelspecs):
     return corcoef_dict
 
 
-### script like functions for single oddball experiments
+#### script like functions for single oddball experiments ####
 
 def single_specs_to_DF(cellid, batch, modelname):
     '''
@@ -250,7 +245,7 @@ def single_specs_to_DF(cellid, batch, modelname):
     return DF
 
 
-### script like fuinctions for batches####
+#### script like fuinctions for batches ####
 
 def batch_specs_to_DF(batch, modelnames):
     '''
@@ -312,64 +307,3 @@ def batch_specs_to_DF(batch, modelnames):
 
 
     return DF, no_file_error, unexpected_error
-
-
-### data frame manipulations
-
-def collapse_jackknife(DF, func=np.mean):
-    '''
-    collapses jackknife repeated values using the defined function
-
-    :param DF: a pandas DF in long format, with numerical values (int, float ...)
-               or groups of numerical values (list, nparr...)
-    :param func: a function able to work on groups of numerical values, e.g. np.mean
-    :return: DF with collapsed groups of values
-    '''
-
-    out_df = DF.copy()
-    out_df['value'] = out_df.value.apply(func)
-
-    return out_df
-
-
-def update_old_format(DF):
-
-    column_map = {'Jitter': 'Jitter',
-                  'model_name': 'modelname',
-                  'values': 'value'}
-
-    DF = DF.rename(columns=column_map)
-
-    value_map = {'On': 'Jitter_On',
-                 'Off': 'Jitter_Off',
-                 'stream0': 'f1',
-                 'stream1': 'f2',
-                 'actual': 'resp',
-                 'predicted': 'pred',
-                 'env100e_fir20_fit01_ssa': 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
-                 'env100e_stp1pc_fir20_fit01_ssa': 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
-                 'SI': 'SSA_index',
-                 'r_est': 'r_est', # not sure what is the equivalent value with the new mse calculation
-                 'Tau': 'tau',
-                 'U': 'u'}
-
-    DF = DF.replace(to_replace = value_map)
-
-    return DF
-
-
-def relevant_from_old_DF(DF):
-
-    DF = update_old_format(DF)
-
-    new_modelnames = ['odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
-                      'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
-
-    DF = DF.loc[DF.modelname.isin(new_modelnames), : ]
-
-    value_map = {'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal': 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal_old',
-                 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal': 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal_old'}
-
-    DF = DF.replace(to_replace=value_map)
-
-    return DF

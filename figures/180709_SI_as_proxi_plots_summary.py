@@ -14,7 +14,7 @@ all_modelnames =np.asarray(['odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal
                            'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
                            'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'])
 
-modelnames = [2,3]
+modelnames = [2,3]  #null an alternative model in that order
 jitter = 'Jitter_Both'
 stream = 'cell'
 
@@ -25,7 +25,7 @@ stream = 'cell'
 DF = jl.load('/home/mateo/oddball_analysis/pickles/180710_DF_all_parms_all_load_only_jal')
 
 #creates new column with model (2) and resp_pred (2) combinations as a single variable
-DF['SI_source'] = ['{}_{}'.format(model.split('_')[1], ap) for model, ap in zip(DF.modelname, DF.resp_pred)]
+DF['SI_source'] = ['{}_{}'.format(model, ap) for model, ap in zip(DF.modelname, DF.resp_pred)]
 
 # Filters for SSA index values, calculated for the whole cell (frequency independent) and, for the poled data of jitter on and of
 
@@ -47,12 +47,22 @@ pivoted = filtered.pivot(index='cellid', columns='SI_source', values='value')
 
 # the names of colums in pivoted are: 'fir2x15_pred', 'fir2x15_resp', 'stp2_pred', 'stp2_resp'
 
-pivoted['null_MES'] = (pivoted.fir2x15_resp - pivoted.fir2x15_pred)**2
-pivoted['alt_MES'] = (pivoted.stp2_resp - pivoted.stp2_pred)**2
+null_pred_name = '{}_{}'.format(modelnames[0], 'pred')
+null_resp_name = '{}_{}'.format(modelnames[0], 'resp')
+alt_pred_name = '{}_{}'.format(modelnames[1], 'pred')
+alt_resp_name = '{}_{}'.format(modelnames[1], 'resp')
+
+pivoted['null_MES'] = (pivoted[null_resp_name] - pivoted[null_pred_name])**2
+pivoted['alt_MES'] = (pivoted[alt_resp_name] - pivoted[alt_pred_name])**2
 pivoted['MSE_delta'] = pivoted['alt_MES'] - pivoted['null_MES']
 
-mseDF = pivoted.loc[:,('null_MES', 'alt_MES', 'MSE_delta')]
 
+# pivoted['null_MES'] = (pivoted.fir2x15_resp - pivoted.fir2x15_pred)**2
+# pivoted['alt_MES'] = (pivoted.stp2_resp - pivoted.stp2_pred)**2
+# pivoted['MSE_delta'] = pivoted['alt_MES'] - pivoted['null_MES']
+
+mseDF = pivoted.loc[:,('null_MES', 'alt_MES', 'MSE_delta')]
+mseDF = mseDF.astype(float)
 
 # Compare the MSE between models without STP and with STP
 fig, axes = plt.subplots(1,2)
@@ -63,12 +73,9 @@ x = mseDF.null_MES
 y = mseDF.alt_MES
 color = 'purple'
 
-ax1.scatter(x, y, c=color, s=40, alpha=0.5)
+mseDF.plot('null_MES', 'alt_MES',kind='scatter', c=color, s=40, alpha=0.5, ax=ax1)
 ax1.set_ylim(ax1.get_xlim())
 ax1.plot(ax1.get_xlim(), ax1.get_xlim(), 'k-')
-ax1.set_ylabel('STP Model', fontsize=15)
-ax1.set_xlabel('Core Model', fontsize=15)
-ax1.tick_params(axis='both', labelsize=15)
 
 # pair delta plots
 z = mseDF.MSE_delta

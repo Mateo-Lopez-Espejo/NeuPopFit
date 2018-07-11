@@ -113,10 +113,9 @@ def get_modelnames():
     # ToDo make it to import a list of all the modelnames... somehow
 
     modelnames = list()
-    # first modelname, it should be renamed
-    modelnames.append('stp2_fir2x15_lvl1_basic-nftrial')
-    # null model name
+    # null and alternative models with onset as envelope
     modelnames.append('odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
+    modelnames.append('odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
 
     # different fit eval jitter subsets
     loaders = ['odd']
@@ -125,8 +124,9 @@ def get_modelnames():
                        for loader, est, val in itt.product(loaders, ests, vals)])
 
     # null and alternative models with stim as envelope
-    modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
     modelnames.append('odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
+    modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
+
 
 
     modelnames = np.asarray(modelnames)

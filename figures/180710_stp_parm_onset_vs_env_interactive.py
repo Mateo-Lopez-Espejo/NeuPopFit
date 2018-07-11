@@ -1,3 +1,4 @@
+import oddball_DF
 import oddball_test as ot
 import pandas as pd
 import numpy as np
@@ -11,8 +12,8 @@ import oddball_plot as op
 # resp_pred = 'pred'
 # modelname = 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 
-modelname1 = 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
-modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+modelname2 = 'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 
 modelnames = [modelname1, modelname2]
 
@@ -23,14 +24,14 @@ stream = 'f1'
 
 # filters for plotting SSA index
 Jitter = 'Jitter_On'
-resp_pred = 'pred'
+resp_pred = 'resp'
 
 
 ######## script starts here
 
 def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames):
     old = jl.load('/home/mateo/batch_296/171115_all_subset_fit_eval_combinations_DF')
-    old = opp.relevant_from_old_DF(old)
+    old = oddball_DF.relevant_from_old_DF(old)
 
     new = jl.load('/home/mateo/oddball_analysis/pickles/180710_DF_all_parms_all_load_only_jal')
     cellids = old.cellid.unique().tolist()
@@ -60,7 +61,7 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames):
         elif parameter in ['tau', 'u']:
             df_filt = df.loc[ff_model & ff_param & ff_stream & ff_cell, ['cellid', 'value']]
 
-        df_filt = opp.collapse_jackknife(df_filt)
+        df_filt = oddball_DF.collapse_jackknife(df_filt)
 
         # check and eliminate duplicates
         print('duplicates: {}'.format(df_filt.duplicated(['cellid']).any()))

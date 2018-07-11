@@ -9,8 +9,8 @@ script_path='/auto/users/mateo/oddball_analysis/cluster_script_180629.py'
 
 # parameters that will be passed to script as argv[1], argv[2], argv[3]:
 parm1 = cellid = 'gus037d-a1' # overwriten later, this was for thest
-parm2 = batch = 296 
-parm3 = modelname = 'stp2_fir2x15_lvl1_basic-nftrial' 
+parm2 = batch = 296
+parm3 = modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
 
 user = 'Mateo'
 force_rerun = True
@@ -26,8 +26,8 @@ ests = vals = ['jof', 'jon']
 modelnames = ['{}_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
               loader, est, val in itt.product(loaders, ests, vals)]
 
-modelnames = ['odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
-              'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
+modelnames = ['odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
+
 # only old cells without jitter status
 #batch_cells = [cellid for cellid in batch_cells if cellid[0:3] != 'gus']
 

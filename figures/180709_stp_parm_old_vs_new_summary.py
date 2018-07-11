@@ -1,3 +1,4 @@
+import oddball_DF
 import oddball_test as ot
 import pandas as pd
 import numpy as np
@@ -22,7 +23,7 @@ colors = ['green', 'red']
 ######## script starts here
 
 old = jl.load('/home/mateo/batch_296/171115_all_subset_fit_eval_combinations_DF')
-old = opp.update_old_format(old)
+old = oddball_DF.update_old_format(old)
 
 new = jl.load('/home/mateo/oddball_analysis/pickles/180709_DF_all_parms_only_jal')
 cellids = old.cellid.unique().tolist()
@@ -54,7 +55,7 @@ for ax, parameter in zip (axes, parameters):
             # filter the DFs
             df_filt = df.loc[ff_model & ff_param & ff_stream & ff_cell, ['cellid', 'value']]
 
-            df_filt = opp.collapse_jackknife(df_filt)
+            df_filt = oddball_DF.collapse_jackknife(df_filt)
 
             # check and eliminate duplicates
             print(df_filt.duplicated(['cellid']).any())
