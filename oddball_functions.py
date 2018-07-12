@@ -402,6 +402,8 @@ def get_signal_activity(signal, sub_epoch, super_epoch, baseline='silence', metr
         Dictionary containing the response level values for each of the sound frequency channels
     '''
 
+    # Todo check behaviour for chn020b-b1 (nan in f2, not in f1) and  chn019a-c1(inf)
+
     if baseline == 'signal':
         base_mean = np.nanmean(signal.as_continuous())
         base_std = np.nanstd(signal.as_continuous())

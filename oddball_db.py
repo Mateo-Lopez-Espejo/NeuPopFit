@@ -127,6 +127,11 @@ def get_modelnames():
     modelnames.append('odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
     modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal')
 
+    # same as previous but with ssa index calculated over jackknifes
+    modelnames.append('odd_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
+    modelnames.append('odd_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
+    modelnames.append('odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
+    modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
 
 
     modelnames = np.asarray(modelnames)

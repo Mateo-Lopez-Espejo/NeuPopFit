@@ -83,7 +83,24 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
 
     # select the metric value and the unique_ID from the original DF
     ff_metric = wdf.parameter == metric
-    metric_DF = wdf.loc[ff_metric, ['unique_ID', 'value']]
+
+    if metric == 'activity':
+        # todo figure out why some activity values are Nan Or Inf
+        ff_jitter = wdf.Jitter == 'Jitter_Both'
+        ff_resp_pred = wdf.resp_pred == 'resp'
+        # get the min value of activity for each frequency
+
+        filtered = wdf.loc[ff_metric & ff_jitter & ff_resp_pred, :]
+
+        pivoted = filtered.pivot(index='unique_ID', columns='stream', values='value')
+        act_min = pivoted.min(axis=1, skipna=False)
+        # excludese inf and NaN
+        noinf = act_min.replace([np.inf, -np.inf], np.nan)
+        nonan = noinf.dropna()
+        metric_DF = nonan.reset_index()
+        metric_DF.columns = ['unique_ID', 'value']
+    else:
+        metric_DF = wdf.loc[ff_metric, ['unique_ID', 'value']]
 
     # from the metric DF select the values that fullfill the criterion
     ff_criterion = metric_DF.value >= threshold
@@ -137,6 +154,18 @@ def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
 
 
 def simplify_DF(DF):
+    '''
+    takes the complete ssa dataframe and reduces its dimentions by jitter status and stream
+    also calculates mean and
+
+
+
+    :param DF:
+    :return:
+    '''
+
+
+
     raise NotImplementedError('just to it')
 
 

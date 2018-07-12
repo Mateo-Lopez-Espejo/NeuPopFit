@@ -7,6 +7,7 @@ import joblib as jl
 import oddball_post_procecing as opp
 import oddball_plot as op
 import oddball_DF as odf
+import scipy.stats as sts
 
 #### ploting parameters
 
@@ -22,6 +23,9 @@ colors = ['green', 'red']
 parameter = 'SSA_index'
 stream = 'cell'
 
+# populatio quality filter
+metric = 'r_test'
+metric = 'activity'
 threshold = 0.2
 
 # filters for plotting SSA index
@@ -53,7 +57,10 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshol
         df_filt = df.loc[ff_model,:]
 
         # filter by goodnes of fit
-        df_filt = odf.filter_df_by_metric(df_filt, metric='r_test', threshold= threshold)
+        df_filt = odf.filter_df_by_metric(df_filt, metric=metric, threshold= threshold)
+        if df_filt.empty is True:
+            print('no cells with this filter')
+            continue
 
         # filter by parameters
         ff_param = df_filt.parameter == parameter
@@ -69,8 +76,6 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshol
             raise NotImplementedError('tau or u not yet implemented')
             # df_filt = df.loc[ff_model & ff_param & ff_stream & ff_cell, ['cellid', 'value']]
 
-
-
         df_filt = oddball_DF.collapse_jackknife(df_filt)
 
         # check and eliminate duplicates
@@ -79,13 +84,20 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshol
 
         # set the indexes
         # df_filt.set_index('cellid', inplace=True)  #take it off for pivot
-
         # rename value columns
         # df_filt = df_filt.rename(columns={'value': '{}'.format(modelname)})
 
         pivot = df_filt.pivot(index='cellid', columns='resp_pred', values='value')
-
+        # get regresion metrics line ploting
+        linreg = sts.linregress(pivot['resp'], pivot['pred'])
+        slope = linreg.slope
+        intercept = linreg.intercept
+        rvalue = linreg.rvalue
         pivot.plot('resp', 'pred', kind='scatter', color=color,  ax=ax, label='{}'.format(modelname), picker=True)
+
+        x = np.asarray(ax.get_xlim())
+        ax.plot(x, intercept + slope * x, color=color, label='slope: {}, r_value: {} '.format(slope, rvalue))
+
         ax.plot(ax.get_ylim(), ax.get_ylim(), ls="--", c=".3")
         ax.legend()
         ax.set_title('{}'.format(parameter))
