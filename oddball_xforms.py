@@ -1,5 +1,5 @@
 import oddball_functions as of
-import oddball_db as od
+import oddball_DB as od
 import nems_db.baphy as nb
 import nems.recording as recording
 import warnings

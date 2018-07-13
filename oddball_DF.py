@@ -1,22 +1,31 @@
+import copy
+
 import numpy as np
+import pandas
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_post_procecing as opp
 
 #### data frame manipulations ####
-def collapse_jackknife(DF, func=np.mean):
+def collapse_jackknife(DF, output='mean'):
     '''
-    collapses jackknife repeated values using the defined function
+    calculates the mean and standard error from a st of jacknife values, returns what is specified by the parameter outpu
 
     :param DF: a pandas DF in long format, with numerical values (int, float ...)
                or groups of numerical values (list, nparr...)
-    :param func: a function able to work on groups of numerical values, e.g. np.mean
+    :param output: str 'mean', 'error'
     :return: DF with collapsed groups of values
     '''
-
     out_df = DF.copy()
-    out_df['value'] = out_df.value.apply(func)
+    if output == 'mean':
+        out_df['value'] = out_df.value.apply(np.mean)
+    elif output == 'error':
+        def jk_ee(jks):
+            return np.mean(jks) * np.sqrt(len(jks) - 1)
+        out_df['value'] = out_df.value.apply(jk_ee)
+    else:
+        raise ValueError ("invalid output value: {}, use 'mean' or 'error'".format(output))
 
     return out_df
 
@@ -80,6 +89,7 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
     wdf = DF.copy()
     # creates a unique file identifier based on cellid and modelname.
     wdf['unique_ID'] = ['{}@{}'.format(cell, model) for cell, model in zip(wdf.cellid, wdf.modelname)]
+    initial_num = len(wdf.unique_ID.unique())
 
     # select the metric value and the unique_ID from the original DF
     ff_metric = wdf.parameter == metric
@@ -102,16 +112,22 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
     else:
         metric_DF = wdf.loc[ff_metric, ['unique_ID', 'value']]
 
+    # cludge: since value can be lists from jackknifes, takes the mean instead
+    metric_DF = collapse_jackknife(metric_DF)
+
     # from the metric DF select the values that fullfill the criterion
     ff_criterion = metric_DF.value >= threshold
     good_files =  metric_DF.loc[ff_criterion, 'unique_ID'].unique()
 
-    # set off cellid modelnames to be kept
+    # how many cells are kept
+    final_num = len(good_files)
+    print('filtered: holding {} values from initial {}'.format(final_num, initial_num))
+
+    # set off cellid modelpairs to be kept
     ff_goodfiles = wdf.unique_ID.isin(good_files)
     ff_badfiles = ~ff_goodfiles
 
     # gets the original DF containing only the goodfiles
-
     df =DF.loc[ff_goodfiles,:]
 
     return df
@@ -119,7 +135,7 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
 
 def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
     '''
-    simply retunrs an orderly DF withe cellid as index, modelnames as column and a goodness of fit metric as values
+    simply retunrs an orderly DF withe cellid as index, modelpairs as column and a goodness of fit metric as values
 
     :param DF: and oddball batch summary DF
     :param metric: the parameter value to be considered in the population mean
@@ -169,9 +185,21 @@ def simplify_DF(DF):
     raise NotImplementedError('just to it')
 
 
+def make_tidy(DF, pivot_by, more_parms, values='value'):
+    # todo implement make tidy by a signle column, it should be easier.
 
+    # sets relevant  indexes
+    newindexes = copy.copy(more_parms)
+    newindexes.append(pivot_by)
+    indexed = DF.set_index(newindexes)
+    # holds only the value column
+    indexed = pd.DataFrame(index=indexed.index, data=indexed[values])
+    # checks for duplicates
+    if indexed.index.duplicated().any():
+        raise ValueError("Index contains duplicated entries, cannot reshape")
 
-
-
-
-
+    # pivots by unstacking, get parameter columns by reseting
+    tidy = indexed.unstack([pivot_by]).reset_index(col_level=pivot_by)
+    # cleans unnecessary multiindex columns
+    tidy.columns = tidy.columns.droplevel(0)
+    return tidy

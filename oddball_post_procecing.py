@@ -234,30 +234,30 @@ def get_est_val_sets(modelspecs):
     return est_val_sets
 
 
-def get_corcoef(modelspecs):
+def get_corrcoef(modelspecs):
     meta_key_list = ['ll_fit', 'll_test', 'mse_fit', 'mse_test', 'r_ceiling', 'r_fit', 'r_floor', 'r_test']
 
     meta = modelspecs[0][0]['meta']
 
-    corcoef_dict = dict.fromkeys(meta_key_list)
+    corrcoef_dict = dict.fromkeys(meta_key_list)
 
-    for key in corcoef_dict.keys():
-        corcoef_dict[key] = meta[key]
+    for key in corrcoef_dict.keys():
+        corrcoef_dict[key] = meta[key]
 
-    return corcoef_dict
+    return corrcoef_dict
+
 
 #### higher level API for lazy pulls ####
 
 def get_si(ctx):
-
     modelspecs = ctx['modelspecs']
 
     SI = get_from_meta(modelspecs, 'SSA_index', as_DF=True, column_names=['Jitter', 'resp_pred', 'stream'])
 
     return SI
 
-def get_ra(ctx):
 
+def get_ra(ctx):
     modelspecs = ctx['modelspecs']
 
     RA = get_from_meta(modelspecs, 'activity', as_DF=True, column_names=['Jitter', 'resp_pred', 'stream'])
@@ -302,8 +302,8 @@ def single_specs_to_DF(cellid, batch, modelname):
 
     # get correlation coefficient values
 
-    corcoef_DF = dict_to_df(get_corcoef(modelspecs), column_names=['parameter'])
-    frames.append(corcoef_DF)
+    corrcoef_DF = dict_to_df(get_corrcoef(modelspecs), column_names=['parameter'])
+    frames.append(corrcoef_DF)
 
     # add more frames to the DF ??
 
@@ -327,7 +327,7 @@ def batch_specs_to_DF(batch, modelnames):
     organizes relevant metadata from all cells in a batch into a dataframe
 
     :param batch: int, batch number, 296 in case of oddball
-    :param modelname: list of modelnames, each modelname is a chain of string specifying the model architecture.
+    :param modelname: list of modelpairs, each modelname is a chain of string specifying the model architecture.
     :return: a data frame in long format. all numerical values are in a single column, all other columns correspond to tags
 
     '''
@@ -377,6 +377,6 @@ def batch_specs_to_DF(batch, modelnames):
 
     DF = pd.concat(models_DF, sort=True)
 
-    DF = DF.reset_index()
+    DF = DF.reset_index(drop=True)
 
     return DF, no_file_error, unexpected_error

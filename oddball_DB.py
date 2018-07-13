@@ -110,7 +110,7 @@ def get_batch_metadata(batch, recache=False):
 
 def get_modelnames():
     # ToDo dont forget to keep adding modelspecs
-    # ToDo make it to import a list of all the modelnames... somehow
+    # ToDo make it to import a list of all the modelpairs... somehow
 
     modelnames = list()
     # null and alternative models with onset as envelope

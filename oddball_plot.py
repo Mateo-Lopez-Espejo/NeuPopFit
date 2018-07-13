@@ -1,5 +1,5 @@
 import oddball_functions as of
-import oddball_db as odb
+import oddball_DB as odb
 import matplotlib.pyplot as plt
 import numpy as np
 import scikits.bootstrap as bts

@@ -12,7 +12,7 @@ import os
 # resp_pred = 'pred'
 # modelname = 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 
-modelname = 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+modelname = 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal' # this plot is shit, i cannot change this val
 
 parameters = ['tau', 'u']
 #Jitter = 'Jitter_On'
