@@ -185,8 +185,13 @@ def simplify_DF(DF):
     raise NotImplementedError('just to it')
 
 
-def make_tidy(DF, pivot_by, more_parms, values='value'):
+def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
     # todo implement make tidy by a signle column, it should be easier.
+    if pivot_by is None:
+        raise NotImplementedError('poke Mateo')
+
+    if more_parms is None:
+        more_parms = [col for col in DF.columns if col!=values]
 
     # sets relevant  indexes
     newindexes = copy.copy(more_parms)
