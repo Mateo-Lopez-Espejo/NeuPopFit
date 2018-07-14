@@ -4,6 +4,7 @@ import joblib as jl
 import oddball_DF as odf
 import scipy.stats as sts
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 #### ploting parameters
 
@@ -19,18 +20,18 @@ modelnames = [modelname1, modelname2]
 parameter = 'SSA_index' # right now only works with SSA_index
 
 stream = ['f1', 'f2', 'cell']
-stream = ['cell']
+#stream = ['cell']
 
 Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
-Jitter = ['Jitter_Both']
+#Jitter = ['Jitter_Both']
 
 # goodness of fit filter
 metric = 'r_test'
-threshold = 0.2
+threshold = 0.15
 
 # activity level filter
 # metric = 'activity'
-# threshold = 2
+# threshold = 0
 
 
 
@@ -71,8 +72,9 @@ def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=s
 
     tidy = odf.make_tidy(filtered,pivot_by, more_parms, values)
 
-    # this is shit, what a surprice
-    sns.factorplot(x='resp', y='pred', hue='modelname', data=tidy, row='Jitter', col='stream', kind='point')
+    g = sns.FacetGrid(tidy, row='Jitter', col='stream', hue='modelname')
+    g.map(plt.scatter, 'resp', 'pred')
+    #sns.factorplot(x='resp', y='pred', hue='modelname', data=tidy, row='Jitter', col='stream', kind='point')
     return DF
 
 DF = stp_plot()

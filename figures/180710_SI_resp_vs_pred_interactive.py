@@ -1,4 +1,3 @@
-import oddball_DF
 import oddball_test as ot
 import pandas as pd
 import numpy as np
@@ -25,19 +24,23 @@ stream = 'cell'
 
 # populatio quality filter
 metric = 'r_test'
-metric = 'activity'
-threshold = 0.2
+#metric = 'activity'
+threshold = 0
 
 # filters for plotting SSA index
 Jitter = 'Jitter_Both'
 resp_pred = 'pred'
+
+# eyeballed outliers
+
+eyeball = odf.eyeball_outliers()
 
 
 ######## script starts here
 
 def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshold=threshold):
     old = jl.load('/home/mateo/batch_296/171115_all_subset_fit_eval_combinations_DF')
-    old = oddball_DF.relevant_from_old_DF(old)
+    old = odf.relevant_from_old_DF(old)
 
     new = jl.load('/home/mateo/oddball_analysis/pickles/180710_DF_all_parms_all_load_only_jal')
     cellids = old.cellid.unique().tolist()
@@ -66,17 +69,18 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshol
         ff_param = df_filt.parameter == parameter
         ff_jitter = df_filt.Jitter == Jitter
         ff_resppred = df_filt.resp_pred == resp_pred
-        ff_cell  = df_filt.cellid.isin(cellids)
         ff_stream = df_filt.stream == stream
+
+        ff_eyeball = ~df_filt.cellid.isin(eyeball)
 
 
         if parameter == 'SSA_index':
-            df_filt = df_filt.loc[ff_jitter & ff_param & ff_stream , :]
+            df_filt = df_filt.loc[ff_jitter & ff_param & ff_stream & ff_eyeball, :]
         elif parameter in ['tau', 'u']:
             raise NotImplementedError('tau or u not yet implemented')
             # df_filt = df.loc[ff_model & ff_param & ff_stream & ff_cell, ['cellid', 'value']]
 
-        df_filt = oddball_DF.collapse_jackknife(df_filt)
+        df_filt = odf.collapse_jackknife(df_filt)
 
         # check and eliminate duplicates
         print('duplicates: {}'.format(df_filt.duplicated(['cellid', 'resp_pred']).any()))
@@ -119,6 +123,7 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshol
             for modelname in modelnames:
                 try:
                     print('plotting\nindex: {}, cellid: {}, modelname: {}'.format(ii, pick_id[ii], modelname))
+                    # print(pick_id[ii])
                     op.cell_psth(pick_id[ii], modelname)
                 except:
                     print('error plotting: index: {}, cellid: {}'.format(ii, pick_id[ii]))

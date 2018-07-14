@@ -208,3 +208,22 @@ def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
     # cleans unnecessary multiindex columns
     tidy.columns = tidy.columns.droplevel(0)
     return tidy
+
+
+def eyeball_outliers():
+    outliers = ('chn022c-a1', # seems like an inhibitory neuron, maybe SI issue solves if calculated with after stim silence
+                'chn019a-a1', # outright not responsive, barely showing any spikes in deviant events for one channels
+                'chn019a-d1', # either late or ofset response, not enoughe deviant responses... unresponsive cell?
+                'chn019a-c1', # extreamply unresponsive and unreliable
+                'chn063b-d1', # noise... is the an alignment priblem?
+                'chn006a-b1', # suppresed by sound
+                'gus016c-c2', # this is the real WTF, check by eye
+                'chn016c-c1', # noise, slighty suppresive
+                'chn073b-b2', # non responsive? some spont
+                'chn008b-c2', # I dont understa why it has a negative SI value, check SI calc.
+                'chn016b-d1', # again not that bad, f1 dev has some nice offset activity
+                'chn062f-a2') # this one is not so bad, by modal response. not sure why model wont capture SI
+
+    outliers = np.asarray(outliers)
+
+    return outliers

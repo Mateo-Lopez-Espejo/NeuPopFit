@@ -1,14 +1,8 @@
-import matplotlib.pyplot as plt
 import joblib as jl
 import numpy as np
 import os
-import io
 
-import nems.modelspec as ms
 import nems.xforms as xforms
-import nems.xform_helper as xhelp
-import nems.utils
-import nems_db.db as db
 import nems_db.xform_wrappers as nw
 import nems_db.baphy as nb
 import nems.recording as recording
@@ -422,5 +416,6 @@ def est_val_test(cellid='gus037d-a1', est='jon', val='jof'):
     return ctx
 
 
-
+def best_cell():
+    return  'chn066b-c1'
 
