@@ -46,7 +46,7 @@ for ii, (ax, modelpair) in enumerate(zip(axes, modelpairs)):
         DF = df.copy()
 
         # recording quality control, selects by activity level
-        quality_filtered = odf.filter_df_by_metric(DF, metric=metric, threshold=threshold)
+        quality_filtered = odf.filter_by_metric(DF, metric=metric, threshold=threshold)
 
         # defiens filters
         ff_modelname = quality_filtered.modelname.isin(modelpair)

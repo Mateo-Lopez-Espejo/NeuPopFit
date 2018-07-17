@@ -10,7 +10,7 @@ import nems.recording as recording
 import oddball_functions as of
 import oddball_xforms as ox
 import oddball_post_procecing as opp
-import single_oddball_processing as sop
+import single_oddball_processing_180705 as sop
 
 # reload modules just in case??
 import imp

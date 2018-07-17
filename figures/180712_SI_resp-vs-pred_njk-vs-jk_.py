@@ -13,8 +13,10 @@ import matplotlib.pyplot as plt
 
 modelname1 = 'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+modelname3 = 'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
+modelname4 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
 
-modelnames = [modelname1, modelname2]
+modelnames = [modelname1, modelname2, modelname3, modelname4]
 
 parameter = 'SSA_index' # right now only works with SSA_index
 
@@ -70,10 +72,22 @@ def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=s
     values = 'value'
 
     tidy = odf.make_tidy(filtered,pivot_by, more_parms, values)
+    # split the modelname into two subsets, model architecture (null or alternative model) and full fit or jackknife fit
+    tidy['model_architecture'] = [arch.split('_')[1] for arch in tidy.modelname] # get model structure
+    tidy['jackknife'] = [jkn.split('_')[-3] for jkn in tidy.modelname] # get jacknife or not
 
-    g = sns.FacetGrid(tidy, row='Jitter', col='stream', hue='modelname')
+    # renames the new columns values for better labeling in plots
+
+    tidy = tidy.replace({'fir2X15': 'w/o_STP', 'stp2': 'w_STP', 'basic-nftrial': 'full_calc', 'si-jk': 'jackknifes'})
+
+
+
+    # g = sns.FacetGrid(tidy, row='Jitter', col='stream', hue='modelname')
+    g = sns.FacetGrid(tidy, row='jackknife', col='stream', hue='model_architecture')
     # g.map(plt.scatter, 'resp', 'pred',  )
     g = (g.map(plt.scatter, "resp", "pred", edgecolor="w", alpha=0.8).add_legend())
+    fig = g.fig
+    fig.suptitle('{} value prediction'.format(parameter))
     return DF
 
 DF = stp_plot()

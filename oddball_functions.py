@@ -656,9 +656,3 @@ def set_recording_oddball_epochs(recording):
         new_signal = set_signal_oddball_epochs(signal)
         new_recording[name] = new_signal
     return new_recording
-
-
-# data base interfacing functions
-
-def get_oddball_parmfiles(cellid):
-    parmfiles = db.get_batch_cell_data(batch=296, cellid=cellid, rawid=None, label=None)

@@ -132,7 +132,6 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
     xfspec.append(['oddball_xforms.mask_by_jitter', {'Jitter_set': val_set}])
 
     # adds predictor
-    # xfspec.append(['nems.xforms.predict', {}])
     xfspec.append(['oddball_xforms.predict_without_merge', {}])
 
     # adds jitter metrics nfold

@@ -74,7 +74,7 @@ def relevant_from_old_DF(df):
 
 
 
-def filter_df_by_metric(DF, metric='r_test', threshold=0):
+def filter_by_metric(DF, metric='r_test', threshold=0):
 
     '''
     returnts a DF with only those cellid/modelname combinations, in which a metric criterion is achieved
@@ -89,7 +89,7 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
     wdf = DF.copy()
     # creates a unique file identifier based on cellid and modelname.
     wdf['unique_ID'] = ['{}@{}'.format(cell, model) for cell, model in zip(wdf.cellid, wdf.modelname)]
-    initial_num = len(wdf.unique_ID.unique())
+    initial_num = len(wdf.cellid.unique())
 
     # select the metric value and the unique_ID from the original DF
     ff_metric = wdf.parameter == metric
@@ -110,7 +110,7 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
         metric_DF = nonan.reset_index()
         metric_DF.columns = ['unique_ID', 'value']
     else:
-        metric_DF = wdf.loc[ff_metric, ['unique_ID', 'value']]
+        metric_DF = wdf.loc[ff_metric, ['cellid', 'unique_ID', 'value']]
 
     # cludge: since value can be lists from jackknifes, takes the mean instead
     metric_DF = collapse_jackknife(metric_DF)
@@ -118,10 +118,12 @@ def filter_df_by_metric(DF, metric='r_test', threshold=0):
     # from the metric DF select the values that fullfill the criterion
     ff_criterion = metric_DF.value >= threshold
     good_files =  metric_DF.loc[ff_criterion, 'unique_ID'].unique()
+    good_cells = metric_DF.loc[ff_criterion, 'cellid'].unique()
+
 
     # how many cells are kept
-    final_num = len(good_files)
-    print('filtered: holding {} values from initial {}'.format(final_num, initial_num))
+    final_num = len(good_cells)
+    print('filtered: holding {} cells from initial {}'.format(final_num, initial_num))
 
     # set off cellid modelpairs to be kept
     ff_goodfiles = wdf.unique_ID.isin(good_files)
@@ -167,23 +169,6 @@ def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
 
 
     return pivoted
-
-
-def simplify_DF(DF):
-    '''
-    takes the complete ssa dataframe and reduces its dimentions by jitter status and stream
-    also calculates mean and
-
-
-
-    :param DF:
-    :return:
-    '''
-
-
-
-    raise NotImplementedError('just to it')
-
 
 def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
     # todo implement make tidy by a signle column, it should be easier.

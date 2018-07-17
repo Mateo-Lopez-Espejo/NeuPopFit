@@ -60,7 +60,7 @@ def stp_plot(parameter=parameter, stream=stream, modelnames=modelnames, threshol
         df_filt = df.loc[ff_model,:]
 
         # filter by goodnes of fit
-        df_filt = odf.filter_df_by_metric(df_filt, metric=metric, threshold= threshold)
+        df_filt = odf.filter_by_metric(df_filt, metric=metric, threshold= threshold)
         if df_filt.empty is True:
             print('no cells with this filter')
             continue
