@@ -14,6 +14,11 @@ parm2 = batch = 296
 # define cellids
 batch_cells = nd.get_batch_cells(batch=296).cellid
 #batch_cells = ['gus037d-a1']
+batch_cells = ['gus019d-b1', 'gus019e-a1', 'gus019e-b1',
+               'gus020c-a1', 'gus020c-c1', 'gus021c-a1',
+               'gus021c-b1', 'gus021f-a1', 'gus021f-a2',
+               'gus035b-c1']
+
 
 # define modelname
 loaders = ['odd']
@@ -21,8 +26,8 @@ ests = vals = ['jof', 'jon']
 modelnames = ['{}_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
               loader, est, val in itt.product(loaders, ests, vals)]
 
-modelnames = ['odd_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal',
-              'odd_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal']
+modelnames = ['odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal',
+              'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal']
 
 modelnames = ['odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal']
 
