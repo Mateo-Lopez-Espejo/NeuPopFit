@@ -418,6 +418,7 @@ def get_signal_activity(signal, sub_epoch, super_epoch, baseline='silence', metr
     # frequencies (f1, f2)...
 
     # extract epochs names matching
+    # todo cheks if this regexp is being used, eliminate
     regexp = r"((SubStim)|(STIM))_\d*\+((0\.\d*)|ONSET)"
     epoch_names_to_extract = ep.epoch_names_matching(signal.epochs, regexp)
 
@@ -430,7 +431,7 @@ def get_signal_activity(signal, sub_epoch, super_epoch, baseline='silence', metr
     pooled_by_freq = dict.fromkeys(['f1', 'f2'])
     for key in pooled_by_freq.keys():
         pooled_by_freq[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
-                                              sound_type.startswith(key)])
+                                              sound_type.startswith(key) and sound_data.size!=0])
 
     # get the PSTH for each of the frequencies
     avg_resp = {frequency: np.nanmean(np.squeeze(folded_sound), axis=0)

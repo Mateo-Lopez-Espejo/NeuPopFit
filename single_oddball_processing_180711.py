@@ -7,6 +7,8 @@ import logging
 import oddball_xforms as ox
 
 
+''' this function/script fits and calculates SI related values by each Jackknife'''
+
 def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_in_DB=False):
     '''
 
@@ -14,14 +16,19 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
                              strim as rasterized point process i.e. edge or onset
                              set oddball dependent epochs
                              set jitter status epochs
+                             sets estimation jitter subset
 
                              short term plasticity
                              fir
                              dc gain shift
                              fit
 
-                             calculates ssa index for [actual, predicted] * [f1, f2, cell]
-                             calculates activiti level   ''        ''       ''  ''   ''
+                             for each jackknife:
+                                 calculates ssa index for [actual, predicted] * [f1, f2, cell]
+                                 calculates activiti level   ''        ''       ''  ''   ''
+
+                             reverse jackknife
+                             calculates goodness of fit metrics
 
 
     :param cellid: str of cell id

@@ -177,7 +177,21 @@ def get_stp_values(modelspecs):
     '''
 
     meta = modelspecs[0][0]['meta']
-    kws = meta['modelspecname'].split('_')
+
+    # backwards_compatibility. old vs new kewyword paradigm
+    kws_old = meta['modelspecname'].split('_')
+    kws_new = meta['modelspecname'].split('-')
+    if len(kws_old) != 1 and len(kws_new) ==1:
+        # old keywords
+        kws = kws_old
+        stp_kw = 'stp2'
+
+    elif len(kws_old) == 1 and len(kws_new) !=1:
+        # new keywords
+        kws = kws_new
+        stp_kw = 'stp.2'
+    else:
+        raise ValueError("cannot split modelspecs into keyword with '-' or '.' ")
 
     # init first dict layer
     stp = dict.fromkeys(['tau', 'u'])
@@ -189,8 +203,8 @@ def get_stp_values(modelspecs):
             stp[outerkey][innerkey] = list()
 
     # looks for the stp in the model architecture keywords
-    if 'stp2' in kws:
-        position = kws.index('stp2')
+    if stp_kw in kws:
+        position = kws.index(stp_kw)
     else:
         # returns an empty dictionary
         for outerkey, innerdict in stp.items():
@@ -202,7 +216,7 @@ def get_stp_values(modelspecs):
     # iterate over each of the estimation subsets
     for jackknife in modelspecs:
         # takes the values correspondign to the STP module
-        phi = jackknife[0]['phi']
+        phi = jackknife[position]['phi']
         for key, val in phi.items():
             stp[key]['f1'].append(val[0])
             stp[key]['f2'].append(val[1])

@@ -133,10 +133,20 @@ def get_modelnames():
     modelnames.append('odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
     modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
 
+    # model with crosstalk between channels, partly following the new keyword paradigm
+    modelnames.append('odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal')
+
 
     modelnames = np.asarray(modelnames)
 
     return modelnames
+
+def get_wierd_cells():
+    wierd_cells = ['gus019d-b1', 'gus019e-a1', 'gus019e-b1', 'gus020c-a1', 'gus020c-c1', 'gus021c-a1', 'gus021c-b1',
+                   'gus021f-a1', 'gus021f-a2', 'gus035b-c1']
+
+    return wierd_cells
+
 
 
 

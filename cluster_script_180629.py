@@ -1,8 +1,5 @@
 # TODO dont forget to check the sop version
-import single_oddball_processing_180717 as sop
-import oddball_DB as od
-
-import nems_db.xform_wrappers as nw
+import single_oddball_processing_180711 as sop
 import nems.utils
 import sys
 import os

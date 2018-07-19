@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_post_procecing as opp
 
+
 #### data frame manipulations ####
 def collapse_jackknife(DF, output='mean'):
     '''
@@ -23,15 +24,15 @@ def collapse_jackknife(DF, output='mean'):
     elif output == 'error':
         def jk_ee(jks):
             return np.mean(jks) * np.sqrt(len(jks) - 1)
+
         out_df['value'] = out_df.value.apply(jk_ee)
     else:
-        raise ValueError ("invalid output value: {}, use 'mean' or 'error'".format(output))
+        raise ValueError("invalid output value: {}, use 'mean' or 'error'".format(output))
 
     return out_df
 
 
 def update_old_format(DF):
-
     column_map = {'Jitter': 'Jitter',
                   'model_name': 'modelname',
                   'values': 'value'}
@@ -47,23 +48,27 @@ def update_old_format(DF):
                  'env100e_fir20_fit01_ssa': 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
                  'env100e_stp1pc_fir20_fit01_ssa': 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
                  'SI': 'SSA_index',
-                 'r_est': 'r_est', # not sure what is the equivalent value with the new mse calculation
+                 'r_est': 'r_est',  # not sure what is the equivalent value with the new mse calculation
                  'Tau': 'tau',
                  'U': 'u'}
 
-    DF = DF.replace(to_replace = value_map)
+    DF = DF.replace(to_replace=value_map)
 
     return DF
 
 
-def relevant_from_old_DF(df):
+def update_by_kws():
+    # todo implement, generate a mapping form old keywords into new keywords, it sould not be difficult
+    raise NotImplementedError('implement!')
 
+
+def relevant_from_old_DF(df):
     DF = update_old_format(df)
 
     new_modelnames = ['odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
                       'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
 
-    DF = DF.loc[DF.modelname.isin(new_modelnames), : ]
+    DF = DF.loc[DF.modelname.isin(new_modelnames), :]
 
     value_map = {'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal': 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal_old',
                  'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal': 'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal_old'}
@@ -73,9 +78,7 @@ def relevant_from_old_DF(df):
     return DF
 
 
-
 def filter_by_metric(DF, metric='r_test', threshold=0):
-
     '''
     returnts a DF with only those cellid/modelname combinations, in which a metric criterion is achieved
     it is recomended that the DF comes from a signle model.
@@ -117,9 +120,8 @@ def filter_by_metric(DF, metric='r_test', threshold=0):
 
     # from the metric DF select the values that fullfill the criterion
     ff_criterion = metric_DF.value >= threshold
-    good_files =  metric_DF.loc[ff_criterion, 'unique_ID'].unique()
+    good_files = metric_DF.loc[ff_criterion, 'unique_ID'].unique()
     good_cells = metric_DF.loc[ff_criterion, 'cellid'].unique()
-
 
     # how many cells are kept
     final_num = len(good_cells)
@@ -130,12 +132,12 @@ def filter_by_metric(DF, metric='r_test', threshold=0):
     ff_badfiles = ~ff_goodfiles
 
     # gets the original DF containing only the goodfiles
-    df =DF.loc[ff_goodfiles,:]
+    df = DF.loc[ff_goodfiles, :]
 
     return df
 
 
-def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
+def goodness_of_fit(DF, metric='r_test', modelnames=None, plot=False):
     '''
     simply retunrs an orderly DF withe cellid as index, modelpairs as column and a goodness of fit metric as values
 
@@ -150,11 +152,10 @@ def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
 
     if modelnames is None:
         modelnames = DF.modelname.unique()
-    elif isinstance(modelnames,list):
+    elif isinstance(modelnames, list):
         pass
 
     ff_model = DF.modelname.isin(modelnames)
-
 
     filtered = DF.loc[ff_metric & ff_model, ['cellid', 'modelname', 'value']]
     print('duplicates: {}'.format(filtered.duplicated(['cellid', 'modelname']).any()))
@@ -163,12 +164,11 @@ def goodness_of_fit(DF, metric='r_test', modelnames = None, plot=False):
     pivoted = filtered.pivot(index='cellid', columns='modelname', values='value')
 
     if plot is True:
-
         ax = sns.boxplot(data=pivoted)
         ax = sns.swarmplot(data=pivoted, color=".25")
 
-
     return pivoted
+
 
 def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
     # todo implement make tidy by a signle column, it should be easier.
@@ -176,7 +176,7 @@ def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
         raise NotImplementedError('poke Mateo')
 
     if more_parms is None:
-        more_parms = [col for col in DF.columns if col!=values]
+        more_parms = [col for col in DF.columns if col != values]
 
     # sets relevant  indexes
     newindexes = copy.copy(more_parms)
@@ -196,18 +196,19 @@ def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
 
 
 def eyeball_outliers():
-    outliers = ('chn022c-a1', # seems like an inhibitory neuron, maybe SI issue solves if calculated with after stim silence
-                'chn019a-a1', # outright not responsive, barely showing any spikes in deviant events for one channels
-                'chn019a-d1', # either late or ofset response, not enoughe deviant responses... unresponsive cell?
-                'chn019a-c1', # extreamply unresponsive and unreliable
-                'chn063b-d1', # noise... is the an alignment priblem?
-                'chn006a-b1', # suppresed by sound
-                'gus016c-c2', # this is the real WTF, check by eye
-                'chn016c-c1', # noise, slighty suppresive
-                'chn073b-b2', # non responsive? some spont
-                'chn008b-c2', # I dont understa why it has a negative SI value, check SI calc.
-                'chn016b-d1', # again not that bad, f1 dev has some nice offset activity
-                'chn062f-a2') # this one is not so bad, by modal response. not sure why model wont capture SI
+    outliers = (
+    'chn022c-a1',  # seems like an inhibitory neuron, maybe SI issue solves if calculated with after stim silence
+    'chn019a-a1',  # outright not responsive, barely showing any spikes in deviant events for one channels
+    'chn019a-d1',  # either late or ofset response, not enoughe deviant responses... unresponsive cell?
+    'chn019a-c1',  # extreamply unresponsive and unreliable
+    'chn063b-d1',  # noise... is the an alignment priblem?
+    'chn006a-b1',  # suppresed by sound
+    'gus016c-c2',  # this is the real WTF, check by eye
+    'chn016c-c1',  # noise, slighty suppresive
+    'chn073b-b2',  # non responsive? some spont
+    'chn008b-c2',  # I dont understa why it has a negative SI value, check SI calc.
+    'chn016b-d1',  # again not that bad, f1 dev has some nice offset activity
+    'chn062f-a2')  # this one is not so bad, by modal response. not sure why model wont capture SI
 
     outliers = np.asarray(outliers)
 

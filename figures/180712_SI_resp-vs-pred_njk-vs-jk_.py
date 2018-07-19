@@ -16,12 +16,12 @@ modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 modelname3 = 'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
 modelname4 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
 
-modelnames = [modelname1, modelname2, modelname3, modelname4]
+modelnames = [modelname1, modelname2, modelname3, modelname4] #, modelname3, modelname4]
 
 parameter = 'SSA_index' # right now only works with SSA_index
 
 stream = ['f1', 'f2', 'cell']
-stream = ['cell']
+#stream = ['cell']
 
 Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
 Jitter = ['Jitter_Both']
@@ -33,6 +33,10 @@ threshold = 0.15
 # activity level filter
 # metric = 'activity'
 # threshold = 0
+
+# compare no-jackknife with jackknife
+
+compare_jk = True # if true Jitter must be a list of a single value
 
 
 
@@ -81,11 +85,13 @@ def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=s
     tidy = tidy.replace({'fir2X15': 'w/o_STP', 'stp2': 'w_STP', 'basic-nftrial': 'full_calc', 'si-jk': 'jackknifes'})
 
 
+    if compare_jk is False:
+        g = sns.FacetGrid(tidy, row='Jitter', col='stream', hue='modelname')
+        g = (g.map(plt.scatter, 'resp', 'pred', edgecolor="w", alpha=0.8).add_legend())
+    elif compare_jk is True:
+        g = sns.FacetGrid(tidy, row='model_architecture', col='stream', hue='jackknife')
+        g = (g.map(plt.scatter, "resp", "pred", edgecolor="w", alpha=0.8).add_legend())
 
-    # g = sns.FacetGrid(tidy, row='Jitter', col='stream', hue='modelname')
-    g = sns.FacetGrid(tidy, row='jackknife', col='stream', hue='model_architecture')
-    # g.map(plt.scatter, 'resp', 'pred',  )
-    g = (g.map(plt.scatter, "resp", "pred", edgecolor="w", alpha=0.8).add_legend())
     fig = g.fig
     fig.suptitle('{} value prediction'.format(parameter))
     return DF

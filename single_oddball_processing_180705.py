@@ -6,6 +6,7 @@ import nems_db.db as nd
 import logging
 import oddball_xforms as ox
 
+''' this function/script fits and calculates SI related values considering the whole signal (no Jackknife)'''
 
 def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_in_DB=False):
     '''

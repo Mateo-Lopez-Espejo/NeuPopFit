@@ -10,8 +10,8 @@ import nems.recording as recording
 import oddball_functions as of
 import oddball_xforms as ox
 import oddball_post_procecing as opp
-import single_oddball_processing_180705 as sop
-
+# import single_oddball_processing_180705 as sop
+import single_oddball_processing_180711 as sop
 # reload modules just in case??
 import imp
 
@@ -372,6 +372,7 @@ def single_specs_to_DF():
     cellid = 'gus037d-a1'
     batch = 296
     modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
+    modelname = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 
     DF = opp.single_specs_to_DF(cellid,batch,modelname)
 
@@ -418,4 +419,15 @@ def est_val_test(cellid='gus037d-a1', est='jon', val='jof'):
 
 def best_cell():
     return  'chn066b-c1'
+
+def act_bug():
+
+    modelname = 'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
+    cellid = 'gus035b-c1'
+    batch = 296
+    ctx = sop.single_oddball_processing(cellid, batch, modelname, force_rerun=False)
+
+    return ctx
+
+
 

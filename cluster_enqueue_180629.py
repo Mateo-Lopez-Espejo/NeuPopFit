@@ -13,7 +13,7 @@ parm2 = batch = 296
 
 # define cellids
 batch_cells = nd.get_batch_cells(batch=296).cellid
-batch_cells = ['gus037d-a1']
+#batch_cells = ['gus037d-a1']
 
 # define modelname
 loaders = ['odd']

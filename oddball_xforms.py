@@ -185,7 +185,7 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
             SI = of.get_recording_SI(this_val, sub_epoch, super_epoch=sup_ep)
             SI_dict[dict_key] = SI
 
-            RA = of.get_recording_activity(this_val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
+            RA = of.get_recording_activity(this_val, sub_epoch, super_epoch=sup_ep, baseline=baseline)
             RA_dict[dict_key] = RA
 
         SI_list.append(SI_dict)
