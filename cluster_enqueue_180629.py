@@ -26,10 +26,10 @@ ests = vals = ['jof', 'jon']
 modelnames = ['{}_fir2x15_lvl1_basic-nftrial_est-{}_val-{}'.format(loader, est, val) for
               loader, est, val in itt.product(loaders, ests, vals)]
 
-modelnames = ['odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal',
-              'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal']
+modelnames = ['odd_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal',
+              'odd_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal']
 
-modelnames = ['odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal']
+# modelnames = ['odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal']
 
 
 # only old cells without jitter status

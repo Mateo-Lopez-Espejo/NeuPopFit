@@ -8,16 +8,19 @@ import matplotlib.pyplot as plt
 import oddball_plot as op
 
 #### ploting parameters
-
-# resp_pred = 'pred'
-# modelname = 'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
-
+# this block for linear vs stp
 modelname1 = 'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
 shortname1 = 'r_test linear'
 modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
 shortname2 = 'r_test STP'
-
 suptitile = 'linear model vs STP model'
+
+# this block for the stp vs wc-stp
+# modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
+# shortname1 = 'r_test STP'
+# modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname2 = 'r_test WC-STP'
+# suptitile = 'STP model vs WC-STP model'
 
 # to be aware, interactive plotting only works properly whenn plotting a single model
 modelnames = [modelname1, modelname2]
@@ -44,9 +47,11 @@ threshold = 0
 
 
 ######## script starts here
-
-
+# this load also contains onset fits
 loaded = jl.load('/home/mateo/oddball_analysis/pickles/180710_DF_all_parms_all_load_only_jal_jackknife')
+
+# this load only contain envelope fits but includesthe STP with channel crosstalk
+loaded = jl.load('/home/mateo/oddball_analysis/pickles/180718_DF_only_env_only_jal_jackknife_3_architectures')
 
 def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=stream, threshold=threshold):
     DF = loaded.copy()
