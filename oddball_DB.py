@@ -134,6 +134,7 @@ def get_modelnames():
     modelnames.append('odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal')
 
     # model with crosstalk between channels, partly following the new keyword paradigm
+    modelnames.append('odd.0_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal')
     modelnames.append('odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal')
 
 

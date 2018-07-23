@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 modelname1 = 'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 
+modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+
 modelnames = [modelname1, modelname2]
 
 parameter = 'SSA_index' # right now only works with SSA_index

@@ -42,6 +42,3 @@ for cellid, modelname in itt.product(batch_cells, modelnames):
                                   executable_path=executable_path, script_path=script_path)
 
     print(msg)
-
-
-# gus035b-c1/296/odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal

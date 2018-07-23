@@ -16,11 +16,11 @@ shortname2 = 'r_test STP'
 suptitile = 'linear model vs STP model'
 
 # this block for the stp vs wc-stp
-# modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
-# shortname1 = 'r_test STP'
-# modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'r_test WC-STP'
-# suptitile = 'STP model vs WC-STP model'
+modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
+shortname1 = 'r_test STP'
+modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+shortname2 = 'r_test WC-STP'
+suptitile = 'STP model vs WC-STP model'
 
 # to be aware, interactive plotting only works properly whenn plotting a single model
 modelnames = [modelname1, modelname2]
@@ -28,13 +28,13 @@ color1 = 'C0'
 color2 = 'C1'
 
 
-parameter = 'r_test' # right now only works with SSA_index
+parameter = 'r_test' # this script is designed to deal with single values per recording (ignoring other vars)
 
 # stream = ['f1', 'f2', 'cell']
-stream = ['cell']
+stream = ['cell'] # unused var
 
 # Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
-Jitter = ['Jitter_Both']
+Jitter = ['Jitter_Both'] # unused var
 
 # goodness of fit filter
 metric = 'r_test'
