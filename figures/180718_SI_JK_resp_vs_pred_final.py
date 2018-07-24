@@ -6,6 +6,7 @@ import scipy.stats as sts
 import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_plot as op
+import os
 
 #### ploting parameters
 
@@ -47,12 +48,18 @@ threshold = 0.15
 
 
 ######## script starts here
+# test files. the paths will be different between my desktop and laptop.
+pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__file__)))[0])
+
 # this load also contains onset fits
-# loaded = jl.load('/home/mateo/oddball_analysis/pickles/180710_DF_all_parms_all_load_only_jal_jackknife')
+# tail = '180710_DF_all_parms_all_load_only_jal_jackknife'
 
 # this load only contain envelope fits but includesthe STP with channel crosstalk
-# loaded = jl.load('/home/mateo/oddball_analysis/pickles/180718_DF_only_env_only_jal_jackknife_3_architectures')
-loaded = jl.load('C:\\Users\Mateo\Science\David_lab\oddball_analysis\pickles\\180718_DF_only_env_only_jal_jackknife_3_architectures')
+tail = '180718_DF_only_env_only_jal_jackknife_3_architectures'
+
+filename = os.path.normcase('{}/{}'.format(pickles, tail))
+loaded = jl.load(filename)
+
 
 def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=stream, threshold=threshold):
     DF = loaded.copy()
@@ -60,7 +67,6 @@ def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=s
 
     # filter by goodnes of fit
     quality_filtered = odf.filter_by_metric(DF, metric=metric, threshold= threshold)
-
     # filter by parameters
     ff_param = quality_filtered.parameter == parameter
     ff_model = quality_filtered.modelname.isin(modelnames)

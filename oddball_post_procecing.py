@@ -4,6 +4,7 @@ import nems.xforms as xforms
 import nems_db.db as nd
 import warnings
 import copy
+import nems.metrics.api as nmet
 
 '''
 collection of functions to extract and parse data from a batch of fitted cells
@@ -248,8 +249,55 @@ def get_est_val_sets(modelspecs):
     return est_val_sets
 
 
+def standard_correlation(est, val, modelspecs, rec=None):
+
+    # Compute scores for validation dat
+    r_ceiling = 0
+    if len(val) == 1:
+        r_test, se_test = nmet.j_corrcoef(val[0], 'pred', 'resp')
+        r_fit, se_fit = nmet.j_corrcoef(est[0], 'pred', 'resp')
+        r_floor = nmet.r_floor(val[0], 'pred', 'resp')
+        if rec is not None:
+            # print('running r_ceiling')
+            r_ceiling = nmet.r_ceiling(val[0], rec, 'pred', 'resp')
+
+    else:
+        r = [nmet.corrcoef(p, 'pred', 'resp') for p in val]
+        r_test = np.mean(r)
+        se_test = np.std(r) / np.sqrt(len(val))
+        r = [nmet.corrcoef(p, 'pred', 'resp') for p in est]
+        r_fit = np.mean(r)
+        se_fit = np.std(r) / np.sqrt(len(val))
+        r_floor = [nmet.r_floor(p, 'pred', 'resp') for p in val]
+
+        # TODO compute r_ceiling for multiple val sets
+        r_ceiling = 0
+
+    mse_test = [nmet.nmse(p, 'pred', 'resp') for p in val]
+    ll_test = [nmet.likelihood_poisson(p, 'pred', 'resp') for p in val]
+
+    mse_fit = [nmet.nmse(p, 'pred', 'resp') for p in val]
+    ll_fit = [nmet.likelihood_poisson(p, 'pred', 'resp') for p in est]
+
+    modelspecs[0][0]['meta']['r_test'] = r_test
+    modelspecs[0][0]['meta']['se_test'] = se_test
+    modelspecs[0][0]['meta']['r_floor'] = r_floor
+    modelspecs[0][0]['meta']['mse_test'] = np.mean(mse_test)
+    modelspecs[0][0]['meta']['ll_test'] = np.mean(ll_test)
+
+    modelspecs[0][0]['meta']['r_fit'] = r_fit
+    modelspecs[0][0]['meta']['se_fit'] = se_fit
+    modelspecs[0][0]['meta']['r_ceiling'] = r_ceiling
+    modelspecs[0][0]['meta']['mse_fit'] = np.mean(mse_fit)
+    modelspecs[0][0]['meta']['ll_fit'] = np.mean(ll_fit)
+
+    return modelspecs
+
+
 def get_corrcoef(modelspecs):
     meta_key_list = ['ll_fit', 'll_test', 'mse_fit', 'mse_test', 'r_ceiling', 'r_fit', 'r_floor', 'r_test']
+    meta_key_list = ['r_test', 'se_test', 'r_floor', 'mse_test', 'll_test',
+                     'r_fit', 'se_fit', 'r_ceiling', 'mse_fit', 'll_fit']
 
     meta = modelspecs[0][0]['meta']
 
