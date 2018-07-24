@@ -1,5 +1,5 @@
 # TODO dont forget to check the sop version
-import single_oddball_processing_180717 as sop
+import single_oddball_processing_180723 as sop
 import nems.utils
 import sys
 import os
