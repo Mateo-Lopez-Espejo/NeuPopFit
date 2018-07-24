@@ -1,3 +1,5 @@
+import numpy as np
+
 import oddball_functions as of
 import oddball_DB as od
 import nems_db.baphy as nb
@@ -7,7 +9,6 @@ import nems.xforms as xforms
 import os
 import nems.modelspec as ms
 import oddball_post_procecing as opp
-
 
 '''
 This is here Just for reference to help me figure out how xfomrms are working
@@ -22,6 +23,7 @@ xfa in my case will have 4 possitions:
 3.    list of key for the output arguments. number o keys must be equal to number of function outputs. This keys are used
       to create new o replace existing values in the final_ctx input dictionary.
 '''
+
 
 def stim_as_rasterized_point_process(rec, scaling, **context):
     # rasterizes all signal
@@ -48,6 +50,7 @@ def give_oddball_format(rec, scaling, as_point_process=True, **context):
     rec = of.set_recording_oddball_epochs(rec)
     return {'rec': rec}
 
+
 def load_oddball(cellid, recache=False, **context):
     cellid = cellid
     batch = 296
@@ -58,7 +61,7 @@ def load_oddball(cellid, recache=False, **context):
     options['rasterfs'] = 100
     options['includeprestim'] = 1
     options['runclass'] = 'SSA'
-    rec_path = nb.baphy_data_path(cellid, batch, **options) # gets the path, if it does not exists, loads and caches.
+    rec_path = nb.baphy_data_path(cellid, batch, **options)  # gets the path, if it does not exists, loads and caches.
     rec = recording.load_recording(rec_path)
     return {'rec': rec}
 
@@ -81,12 +84,11 @@ def mask_by_jitter(rec, Jitter_set, **context):
 
         Jitter_set = map[Jitter_set]
 
-
     # checks that jitter epochs exists, if only Jitter Off, set to default and raise warning
-    ep_names  = rec.epochs.name.unique()
+    ep_names = rec.epochs.name.unique()
     if Jitter_set in ep_names:
         pass
-    elif Jitter_set not in ep_names :
+    elif Jitter_set not in ep_names:
         mesg = 'recording does noc contain {} in epochs'.format(Jitter_set)
         raise ValueError(mesg)
     else:
@@ -118,20 +120,18 @@ def save_analysis(destination,
     for number, modelspec in enumerate(modelspecs):
         xforms.set_modelspec_metadata(modelspec, 'xfspec', xfspec_uri)
         xforms.save_resource(base_uri + 'modelspec.{:04d}.json'.format(number),
-                      json=modelspec)
+                             json=modelspec)
 
     if figures is not None:
         for number, figure in enumerate(figures):
             xforms.save_resource(base_uri + 'figure.{:04d}.png'.format(number),
-                          data=figure)
+                                 data=figure)
     xforms.save_resource(base_uri + 'log.txt', data=log)
     xforms.save_resource(xfspec_uri, json=xfspec)
     return {'savepath': base_uri}
 
 
-
 def predict_without_merge(est, val, modelspecs, **context):
-
     if type(val) is list:
         # ie, if jackknifing
         new_est = [ms.evaluate(d, m) for m, d in zip(modelspecs, est)]
@@ -141,11 +141,10 @@ def predict_without_merge(est, val, modelspecs, **context):
         new_est = [ms.evaluate(est, m) for m in modelspecs]
         new_val = [ms.evaluate(val, m) for m in modelspecs]
 
-    return {'est':new_est, 'val': new_val}
+    return {'est': new_est, 'val': new_val}
 
 
 def merge_val(val, **context):
-
     if type(val) is list:
         # ie, if jackknifing
         new_val = [recording.jackknife_inverse_merge(val)]
@@ -157,7 +156,6 @@ def merge_val(val, **context):
 
 
 def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
-
     # ToDO this is finally workign, implement and test
     # calculates SSA index and activity index for each validation set
     # initialzies two lists of nested dictionaries
@@ -175,7 +173,6 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
         # initializes dictionaries for the superepochs
         SI_dict = dict.fromkeys(super_epoch)
         RA_dict = dict.fromkeys(super_epoch)
-
 
         for sup_ep in super_epoch:
             dict_key = sup_ep
@@ -201,6 +198,61 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
     return modelspecs
 
 
+def jk_corrcoef(val, modelspecs, njacks=20, **context):
+    # ToDo get rid of this kludge and figure ot how to calculate Wilcoxon with the standard error of jackknifed estimators
+
+    '''
+    claculates the correlation coefficient of the actual and predicted response njacks times. returns an array with all
+    the calculated corrcoefs
+
+    :param val: a list of a single recording.
+    :param modelspecs: a pointer to the modelspecs of a context
+    :param njacks: number of jackknifes to perform
+    :param context: the ctx object
+    :return: a keyword in modelspecs containing the array with all the calculated values of corrcoef for each jackknife
+    '''
+
+    if len(val) == 1:
+        val = val[0]
+    else:
+        raise ValueError('jk_corrcoef should be done after inverse jackknife')
+
+    predmat = val['pred'].as_continuous()
+    respmat = val['resp'].as_continuous()
+
+    channel_count = predmat.shape[0]
+    cc = np.zeros([channel_count, njacks])
+
+    for i in range(channel_count):
+        pred = predmat[i, :]
+        resp = respmat[i, :]
+        ff = np.isfinite(pred) & np.isfinite(resp)
+
+        if (np.sum(ff) == 0) or (np.sum(pred[ff]) == 0) or (np.sum(resp[ff]) == 0):
+            pass
+        else:
+            pred = pred[ff]
+            resp = resp[ff]
+            chunksize = int(np.ceil(len(pred) / njacks / 10))
+            chunkcount = int(np.ceil(len(pred) / chunksize / njacks))
+            idx = np.zeros((chunkcount, njacks, chunksize))
+            for jj in range(njacks):
+                idx[:, jj, :] = jj
+            idx = np.reshape(idx, [-1])[:len(pred)]
+            jc = np.zeros(njacks)
+            for jj in range(njacks):
+                ff = (idx != jj)
+                jc[jj] = np.corrcoef(pred[ff], resp[ff])[0, 1]
+
+            cc[i, :] = jc
+
+            if cc.shape[0] == 1:
+                cc = cc.squeeze()
+
+    modelspecs[0][0]['meta']['jk_r_test'] = cc
+
+    return modelspecs
+
 # def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
 #     # calculates SSA index and activity index for the validatio. asumes unique validation recording.
 #     if len(val) != 1:
@@ -225,4 +277,4 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
 #         modelspecs[0][0]['meta']['SSA_index'][dict_key] = SI
 #         RA = of.get_recording_activity(val, sub_epoch, super_epoch='Jitter_Off', baseline=baseline)
 #         modelspecs[0][0]['meta']['activity'][dict_key] = RA
-#     return modelspecs
+#     return modelspecs=

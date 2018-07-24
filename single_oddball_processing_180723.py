@@ -113,6 +113,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
         old_names = True
     else:
         midway_modelname = modelname
+        old_names = False
 
 
     midway_cache = '/auto/users/mateo/oddball_results/{0}/{1}/{2}/'.format(
@@ -165,9 +166,11 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
     xfspec.append(['oddball_xforms.merge_val', {}])
 
     # add metrics correlation
-    # ToDo add jk metrics correlation
     xfspec.append(['nems.analysis.api.standard_correlation', {},
                    ['est', 'val', 'modelspecs', 'rec'], ['modelspecs']])
+
+    # add jackknifed r_test
+    xfspec.append(['oddball_xforms.jk_corrcoef', {'njacks':20}, ['val', 'modelspecs'], ['modelspecs']])
 
     # adds sumary plots ToDo i dont like this plotting, but is necesary to user Save analysis
     xfspec.append(['nems.xforms.plot_summary', {}])
@@ -190,7 +193,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
                          log=log_xf)
 
     if save_in_DB:
-        # save in database as well TODO why is saving as single element of modelspec?
+        # save in database as well
         nd.update_results_table(modelspecs[0], preview=None,
                                 username="MLE", labgroup="lbhb")
 
