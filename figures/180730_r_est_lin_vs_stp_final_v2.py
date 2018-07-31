@@ -35,7 +35,8 @@ shortnames = [shortname1, shortname2]
 color1 = '#FDBF76'  # yellow for linear model
 color2 = '#CD679A'  # pink for stp model
 
-parameter = 'jk_r_test'  # this script is designed to deal with single values per recording (ignoring other vars)
+parameters = ['r_test',
+              'se_test']  # this script is designed to deal with single values per recording (ignoring other vars)
 
 # stream = ['f1', 'f2', 'cell']
 stream = ['cell']  # unused var
@@ -73,7 +74,7 @@ DF = loaded.copy()
 quality_filtered = odf.filter_by_metric(DF, metric=metric, threshold=threshold)
 
 # filter by parameters
-ff_param = quality_filtered.parameter == parameter
+ff_param = quality_filtered.parameter.isin(parameters)
 ff_model = quality_filtered.modelname.isin(modelnames)
 ff_jitter = quality_filtered.Jitter.isin(Jitter)
 ff_stream = quality_filtered.stream.isin(stream)
@@ -83,7 +84,7 @@ filtered = quality_filtered.loc[ff_param & ff_model, :]
 
 # makes into r_tidy format holding only necesary parameters e.g. cellid, and pivoting by one the parameter
 # to be ploted as x and y
-more_parms = ['cellid']
+more_parms = ['cellid', 'parameter']
 pivot_by = 'modelname'
 values = 'value'
 
@@ -94,7 +95,33 @@ tidy = tidy.rename(columns={modelname1: shortname1,
                             modelname2: shortname2})
 
 # finds significance between columns and generate a new parameter
-tidy, sig_name, nsig_name = odf.tidy_significance(tidy, shortnames, fn=odf.jackknifed_sign, alpha=0.05)
+# tidy, sig_name, nsig_name = odf.tidy_significance(tidy,shortnames,fn=odf.jackknifed_sign, alpha=0.05)
+
+# finds significance using the precalculated mean and standard error values.
+wdf = filtered.replace({modelname1: shortname1, modelname2: shortname2})
+wdf = wdf.set_index(['modelname', 'parameter', 'cellid'])
+print(wdf.index.duplicated().any())
+wdf = pd.DataFrame(index=wdf.index, data=wdf.value.astype(np.float))
+wdf = wdf.unstack(['modelname', 'parameter'])
+wdf.columns = wdf.columns.droplevel(0)
+
+# calculates significance
+wdf['significant', 'r_test'] = (np.abs(wdf[shortname1, 'r_test'] - wdf[shortname2, 'r_test']) >
+                                (wdf[shortname1, 'se_test'] + wdf[shortname2, 'se_test']))
+
+# drop standard errors
+wdf = wdf.xs('r_test', axis=1, level='parameter')
+
+# renames significant level to keep old format
+sig_count = wdf.significant.sum()
+nsig_count = wdf.shape[0] - sig_count
+print('{}/{} significant'.format(sig_count, wdf.shape[0]))
+alpha = 0.05
+sig_name = 'p<{} (n={})'.format(alpha, sig_count)
+nsig_name = 'NS (n={})'.format(nsig_count)
+wdf = wdf.replace({True: sig_name, False: nsig_name})
+
+tidy = wdf
 
 # gets linear regression values for printing? plotting?
 nonan = tidy.dropna()

@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 modelname1 = 'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 
-modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+# this blocks compares the onset vs envelope for the model with crosstalk
+modelname1 = 'odd.0_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 
 modelnames = [modelname1, modelname2]
@@ -76,7 +77,10 @@ def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=s
 
     g = sns.FacetGrid(tidy, row='Jitter', col='stream', hue='modelname')
     # g.map(plt.scatter, 'resp', 'pred',  )
-    g = (g.map(plt.scatter, "resp", "pred", edgecolor="w", alpha=0.8).add_legend())
+    g = (g.map(plt.scatter, "resp", "pred", edgecolor="w", alpha=0.8))
+    fig =  g.fig
+    ax = g.ax
+    ax.legend()
     return DF
 
 DF = stp_plot()

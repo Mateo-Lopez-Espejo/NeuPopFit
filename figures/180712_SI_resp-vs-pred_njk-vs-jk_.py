@@ -21,7 +21,7 @@ modelnames = [modelname1, modelname2, modelname3, modelname4] #, modelname3, mod
 parameter = 'SSA_index' # right now only works with SSA_index
 
 stream = ['f1', 'f2', 'cell']
-#stream = ['cell']
+stream = ['cell']
 
 Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
 Jitter = ['Jitter_Both']

@@ -29,7 +29,7 @@ def load_single_modspec(cellid, batch, modelname):
     '''
     source_dir = get_source_dir(cellid, batch, modelname)
 
-    _, ctx = xforms.load_analysis(source_dir, eval_model=True)
+    _, ctx = xforms.load_analysis(source_dir, eval_model=False)
     modelspecs = ctx['modelspecs']
 
     return modelspecs
@@ -249,9 +249,9 @@ def get_est_val_sets(modelspecs):
 
 
 def get_corrcoef(modelspecs):
-    meta_key_list = ['ll_fit', 'll_test', 'mse_fit', 'mse_test', 'r_ceiling', 'r_fit', 'r_floor', 'r_test']
     meta_key_list = ['r_test', 'se_test', 'r_floor', 'mse_test', 'll_test',
-                     'r_fit', 'se_fit', 'r_ceiling', 'mse_fit', 'll_fit']
+                     'r_fit', 'se_fit', 'r_ceiling', 'mse_fit', 'll_fit',
+                     'jk_r_test']
 
     meta = modelspecs[0][0]['meta']
 

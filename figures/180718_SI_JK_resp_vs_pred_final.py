@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import joblib as jl
 import oddball_DF as odf
-import scipy.stats as sts
+import scipy.stats as sst
 import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_plot as op
@@ -11,16 +11,16 @@ import os
 #### ploting parameters
 
 # this block for act vs pred SI across linear and STP models
-modelname1 = 'odd1_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
+modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname1 = 'Linear model'
-modelname2 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
+modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname2 = 'STP model'
 
 # this block for the stp vs wc-stp
 # modelname1 = 'odd1_stp2_fir2x15_lvl1_basic-nftrial_si-jk_est-jal_val-jal'
-# shortname1 = 'r_test STP'
+# shortname1 = 'STP model'
 # modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'r_test WC-STP'
+# shortname2 = 'WC-STP model'
 
 
 # to be aware, interactive plotting only works properly whenn plotting a single model
@@ -34,12 +34,12 @@ parameter = 'SSA_index' # right now only works with SSA_index
 # stream = ['f1', 'f2', 'cell']
 stream = ['cell']
 
-# Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
+# Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter'NS (n=30)'_Both']
 Jitter = ['Jitter_Both']
 
 # goodness of fit filter
 metric = 'r_test'
-threshold = 0.15
+threshold = 0.2
 
 # activity level filter
 # metric = 'activity'
@@ -61,56 +61,70 @@ filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)
 
 
-def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=stream, threshold=threshold):
-    DF = loaded.copy()
-    DF = odf.collapse_jackknife(DF)
 
-    # filter by goodnes of fit
-    quality_filtered = odf.filter_by_metric(DF, metric=metric, threshold= threshold)
-    # filter by parameters
-    ff_param = quality_filtered.parameter == parameter
-    ff_model = quality_filtered.modelname.isin(modelnames)
-    ff_jitter = quality_filtered.Jitter.isin(Jitter)
-    ff_stream = quality_filtered.stream.isin(stream)
-    #ff_resppred = quality_filtered.resp_pred == resp_pred
+DF = loaded.copy()
+# DF = odf.collapse_jackknife(DF)
 
-    filtered = quality_filtered.loc[ff_param & ff_model & ff_jitter & ff_stream, :]
+# filter by goodnes of fit
+quality_filtered = odf.filter_by_metric(DF, metric=metric, threshold= threshold)
+# filter by parameters
+ff_param = quality_filtered.parameter == parameter
+ff_model = quality_filtered.modelname.isin(modelnames)
+ff_jitter = quality_filtered.Jitter.isin(Jitter)
+ff_stream = quality_filtered.stream.isin(stream)
+#ff_resppred = quality_filtered.resp_pred == resp_pred
+ff_badcell = ~quality_filtered.cellid.isin(['chn008b-c2']) # this is cherry picking
 
-    more_parms =  ['modelname', 'Jitter', 'stream', 'cellid']
-    pivot_by = 'resp_pred'
-    values = 'value'
+filtered = quality_filtered.loc[ff_param & ff_model & ff_jitter & ff_stream & ff_badcell, :]
+filtered = quality_filtered.loc[ff_param & ff_model & ff_jitter & ff_stream, :]
 
-    tidy = odf.make_tidy(filtered,pivot_by, more_parms, values)
+more_parms =  ['modelname', 'cellid']# , 'Jitter', 'stream', ]
+pivot_by = 'resp_pred'
+values = 'value'
 
-    # changes names of modelname for ese of interpretations
-    tidy = tidy.replace({modelname1: shortname1,
-                  modelname2: shortname2})
+tidy = odf.make_tidy(filtered,pivot_by, more_parms, values)
 
-    pick_id = tidy.cellid.tolist()
+# changes names of modelname for ese of interpretations
+tidy = tidy.replace({modelname1: shortname1,
+              modelname2: shortname2})
 
-    # gets linear regression values for printing? plotting?
-    for architecture in tidy.modelname.unique():
-        ff_architecture = tidy.modelname == architecture
-        x = tidy.loc[ff_architecture, 'resp']
-        y = tidy.loc[ff_architecture, 'pred']
-        linreg = sts.linregress(x, y)
-        print('{}: {}'.format(architecture,linreg))
+tidy, sig_name, nsig_name = odf.tidy_significance(tidy,['resp', 'pred'],fn=odf.jackknifed_sign, alpha=0.05)
+# checks the number of significant dots for each model
+mod1_sig = tidy.loc[(tidy.modelname == shortname1) & (tidy.significant == sig_name)].shape[0]
+mod1_nsig = tidy.loc[(tidy.modelname == shortname1) & (tidy.significant == nsig_name)].shape[0]
+mod2_sig = tidy.loc[(tidy.modelname == shortname2) & (tidy.significant == sig_name)].shape[0]
+mod2_nsig = tidy.loc[(tidy.modelname == shortname2) & (tidy.significant == nsig_name)].shape[0]
 
-    # lmplot (linearmodel plot) fuses FacetGrid and regplot. so fucking tidy!
-    # format passed to plt...
-    palette = [color1, color2]
-    line_kws = {'linestyle': '-'}
-    scatter_kws = {'alpha': 0.8,
-                   'picker': True}
+print('Linear model: {}/{} significantly different'.format(mod1_sig, mod1_sig+mod1_nsig))
+print('STP model: {}/{} significantly different'.format(mod2_sig, mod2_sig+mod2_nsig))
 
-    g = sns.lmplot(x='resp', y='pred', hue='modelname', row='Jitter', col='stream',
-                   aspect =1, legend_out=False, palette=palette,
-                   line_kws=line_kws, scatter_kws=scatter_kws,
-                   ci=None, data=tidy)
+pick_id = tidy.cellid.tolist()
 
-    fig = g.fig
-    ax = g.ax
+# gets linear regression values for printing? plotting?
+for architecture in tidy.modelname.unique():
+    ff_architecture = tidy.modelname == architecture
+    x = tidy.loc[ff_architecture, 'resp']
+    y = tidy.loc[ff_architecture, 'pred']
+    linreg = sst.linregress(x, y)
+    print('{}: {}'.format(architecture,linreg))
 
+# lmplot (linearmodel plot) fuses FacetGrid and regplot. so fucking r_tidy!
+# format passed to plt...
+palette = [color1, color2]
+line_kws = {'linestyle': '-'}
+scatter_kws = {'alpha': 0.8,
+               'picker': True}
+
+g = sns.lmplot(x='resp', y='pred', hue='modelname',  col='significant', #col='stream', row='Jitter',
+               aspect =1, legend_out=False, palette=palette,
+               line_kws=line_kws, scatter_kws=scatter_kws,
+               ci=None, data=tidy)
+
+fig = g.fig
+axes = g.axes
+axes = np.ravel(axes)
+
+for ax in axes:
     # vertical an horizontal lines at 0
     ax.axvline(0, color='black', linestyle='--') # vertical line at 0
     ax.axhline(0, color='black', linestyle='--') # hortizontal line at 0
@@ -126,24 +140,28 @@ def stp_plot(parameter=parameter, modelnames=modelnames, Jitter=Jitter, stream=s
     upperright = np.min([np.max(ax.get_xlim()), np.max(ax.get_ylim())])
     ax.plot([lowerleft, upperright], [lowerleft, upperright], 'k--')
 
-    ax.set_xlabel('actual SI')
-    ax.set_ylabel('predicted SI')
-    ax.set_title('')
+    ax.set_xlabel('actual SI', fontsize=20)
+    ax.set_ylabel('predicted SI', fontsize=20)
+    # ax.set_title('')
+
+    # adds format to the legend box
+    legend = ax.get_legend()
+    legend.set_title(None)
+    legend.get_frame().set_linewidth(0.0)
+
+plt.tight_layout()
 
 
-    def onpick(event):
-        ind = event.ind
-        for ii in ind:
-            for modelname in modelnames:
-                try:
-                    # print('{}'.format(pick_id[ii]))
-                    print('plotting\nindex: {}, cellid: {}, modelname: {}'.format(ii, pick_id[ii], modelname))
-                    op.cell_psth(pick_id[ii], modelname)
-                except:
-                    print('error plotting: index: {}, cellid: {}'.format(ii, pick_id[ii]))
+def onpick(event):
+    ind = event.ind
+    for ii in ind:
+        for modelname in modelnames:
+            try:
+                # print('{}'.format(pick_id[ii]))
+                print('plotting\nindex: {}, cellid: {}, modelname: {}'.format(ii, pick_id[ii], modelname))
+                op.cell_psth(pick_id[ii], modelname)
+            except:
+                print('error plotting: index: {}, cellid: {}'.format(ii, pick_id[ii]))
 
-    fig.canvas.mpl_connect('pick_event', onpick)
+fig.canvas.mpl_connect('pick_event', onpick)
 
-    return g
-
-g = stp_plot()

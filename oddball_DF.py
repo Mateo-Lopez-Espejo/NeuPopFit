@@ -1,5 +1,5 @@
 import copy
-
+import scipy.stats as sst
 import numpy as np
 import pandas
 import pandas as pd
@@ -9,27 +9,49 @@ import oddball_post_procecing as opp
 
 
 #### data frame manipulations ####
-def collapse_jackknife(DF, output='mean'):
+def collapse_jackknife(DF, columns=['value'], fn=np.mean):
     '''
     calculates the mean and standard error from a st of jacknife values, returns what is specified by the parameter outpu
 
     :param DF: a pandas DF in long format, with numerical values (int, float ...)
                or groups of numerical values (list, nparr...)
-    :param output: str 'mean', 'error'
+    :param fn: str 'mean', 'error'
     :return: DF with collapsed groups of values
     '''
     out_df = DF.copy()
-    if output == 'mean':
-        out_df['value'] = out_df.value.apply(np.mean)
-    elif output == 'error':
-        def jk_ee(jks):
-            return np.mean(jks) * np.sqrt(len(jks) - 1)
-
-        out_df['value'] = out_df.value.apply(jk_ee)
-    else:
-        raise ValueError("invalid output value: {}, use 'mean' or 'error'".format(output))
+    for col in columns:
+        out_df[col] = out_df[col].apply(fn)
 
     return out_df
+
+
+def tidy_significance(DF, columns, fn=sst.wilcoxon, alpha=0.01):
+    out_df = DF.copy()
+
+    def fn_to_row(row):
+        # todo put bak the statistic
+        _,pvalue = fn(row[columns[0]], row[columns[1]])
+        return pvalue
+
+    # saves pvalue
+    out_df['pvalue'] = DF.apply(fn_to_row, axis=1)
+
+    # defines significance based on alpha and pvalue
+    out_df['significant'] = (out_df['pvalue'] < alpha)#.astype(int)
+
+    # gets the mean of the jackknife values
+    for col in columns:
+        out_df[col] = out_df[col].apply(np.mean)
+
+    # renames True and False significance
+    sig_count = out_df.significant.sum()
+    nsig_count = out_df.shape[0] - sig_count
+    print('{}/{} significantl cells using {} test'.format(sig_count, out_df.shape[0], fn))
+    sig_name = 'p<{} (n={})'.format(alpha, sig_count)
+    nsig_name = 'NS (n={})'.format(nsig_count)
+    out_df = out_df.replace({True: sig_name, False: nsig_name})
+
+    return out_df, sig_name, nsig_name
 
 
 def update_old_format(DF):
@@ -125,7 +147,8 @@ def filter_by_metric(DF, metric='r_test', threshold=0):
 
     # how many cells are kept
     final_num = len(good_cells)
-    print('filtered: holding {} cells from initial {}'.format(final_num, initial_num))
+    print(' \nfiltering out cells with {} below {}: holding {} cells from initial {}'.
+          format(metric, threshold, final_num, initial_num))
 
     # set off cellid modelpairs to be kept
     ff_goodfiles = wdf.unique_ID.isin(good_files)
@@ -171,7 +194,8 @@ def goodness_of_fit(DF, metric='r_test', modelnames=None, plot=False):
 
 
 def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
-    # todo implement make tidy by a signle column, it should be easier.
+    # todo implement make r_tidy by a signle column, it should be easier.
+    # todo implement pivot by multiple columns
     if pivot_by is None:
         raise NotImplementedError('poke Mateo')
 
@@ -213,3 +237,29 @@ def eyeball_outliers():
     outliers = np.asarray(outliers)
 
     return outliers
+
+
+def jackknifed_sign(x, y):
+    '''
+    calculates significance based on mena and standard error for jackknifed measurements
+    :param x: a list of statistics from related jackknifes
+    :param y: a list of statistics from related jackknifes
+    :return: statistic, pvalue
+    '''
+    assert len(x) == len(y)
+
+    num_of_jacks = len(x)
+    x_mean = np.mean(x)
+    y_mean = np.mean(y)
+    x_se = np.std(x) * (np.sqrt(num_of_jacks-1))
+    y_se = np.std(y) * (np.sqrt(num_of_jacks-1))
+
+    # if distance between means is bigger than the dispersions i.e. if the dispersions do not overlap
+    if abs((x_mean - y_mean)) > (x_se + y_se):
+        pvalue = 0
+    else:
+        pvalue =1
+
+    statistic = (x_mean - y_mean) - (x_se + y_se)
+
+    return statistic, pvalue

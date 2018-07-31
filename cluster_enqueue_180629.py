@@ -13,7 +13,7 @@ parm2 = batch = 296
 
 # define cellids
 batch_cells = nd.get_batch_cells(batch=296).cellid
-batch_cells = ['gus037d-a1']
+#batch_cells = ['gus037d-a1']
 # batch_cells = ['gus019d-b1', 'gus019e-a1', 'gus019e-b1',
 #                'gus020c-a1', 'gus020c-c1', 'gus021c-a1',
 #                'gus021c-b1', 'gus021f-a1', 'gus021f-a2',
