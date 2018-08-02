@@ -130,7 +130,7 @@ def df_vals_tolist(DFs):
     return newDF
 
 
-def swap_struct_levels(list_of_dicts):
+def swap_struct_levels(list_of_dicts, as_array=True):
     # todod for each nested dict, flat dictionary
     flat_dicts = [flatten_dict(d) for d in list_of_dicts]
     out_dict = copy.copy(flat_dicts[0])
@@ -138,6 +138,8 @@ def swap_struct_levels(list_of_dicts):
     for fkey in out_dict.keys():
         # for each unit compounded key, pool all values in list
         val_list = [fdict[fkey] for fdict in flat_dicts]
+        if as_array is True:
+            val_list = np.asarray(val_list)
         out_dict[fkey] = val_list
 
     out_dict = unflatten_dict(out_dict)

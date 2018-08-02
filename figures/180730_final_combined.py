@@ -85,7 +85,7 @@ r_tidy, sig_name, nsig_name = odf.tidy_significance(r_tidy, shortnames, fn=odf.j
 
 # gets mean and standard deviation for each model r_test
 for short in shortnames:
-    print('{} mean r_test: {:+.3f}'.format(short, np.mean(r_tidy[short])))
+    print('{} mean r_test: {:.3f}'.format(short, np.mean(r_tidy[short])))
 
 
 ### SI
@@ -124,7 +124,7 @@ for short in shortnames:
     resp = wdf['resp'].values
     pred = wdf['pred'].values
     linreg = sst.linregress(resp, pred)
-    print('{}: resp mean {:+.3f}, pred mean {:+.3f}, corcoef {:+.3f}'.format(short, np.mean(resp), np.mean(pred), linreg.rvalue))
+    print('{}: resp mean {:.3f}, pred mean {:.3f}, corcoef {:.3f}'.format(short, np.mean(resp), np.mean(pred), linreg.rvalue))
 
 
 

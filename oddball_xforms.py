@@ -156,7 +156,6 @@ def merge_val(val, **context):
 
 
 def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
-    # ToDO this is finally workign, implement and test
     # calculates SSA index and activity index for each validation set
     # initialzies two lists of nested dictionaries
     SI_list = list()
@@ -189,8 +188,8 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
         RA_list.append(RA_dict)
 
     # tunrs the lists of nested dictionaries into nested dictionaries of lists
-    SI = opp.swap_struct_levels(SI_list)
-    RA = opp.swap_struct_levels(RA_list)
+    SI = opp.swap_struct_levels(SI_list, as_array=True)
+    RA = opp.swap_struct_levels(RA_list, as_array=True)
 
     # update modelspecs with the adecuate metadata
     modelspecs[0][0]['meta']['SSA_index'] = SI

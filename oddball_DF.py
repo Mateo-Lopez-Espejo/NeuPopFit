@@ -49,7 +49,8 @@ def tidy_significance(DF, columns, fn=sst.wilcoxon, alpha=0.01):
     print('{}/{} significantl cells using {} test'.format(sig_count, out_df.shape[0], fn))
     sig_name = 'p<{} (n={})'.format(alpha, sig_count)
     nsig_name = 'NS (n={})'.format(nsig_count)
-    out_df = out_df.replace({True: sig_name, False: nsig_name})
+    # out_df = out_df.replace({True: sig_name, False: nsig_name})
+    out_df.significant.replace({True: sig_name, False: nsig_name}, inplace=True)
 
     return out_df, sig_name, nsig_name
 
@@ -241,7 +242,7 @@ def eyeball_outliers():
 
 def jackknifed_sign(x, y):
     '''
-    calculates significance based on mena and standard error for jackknifed measurements
+    calculates significance based on mean and standard error for jackknifed measurements
     :param x: a list of statistics from related jackknifes
     :param y: a list of statistics from related jackknifes
     :return: statistic, pvalue
@@ -256,10 +257,11 @@ def jackknifed_sign(x, y):
 
     # if distance between means is bigger than the dispersions i.e. if the dispersions do not overlap
     if abs((x_mean - y_mean)) > (x_se + y_se):
-        pvalue = 0
+        significant = 0
     else:
-        pvalue =1
+        significant =1
 
     statistic = (x_mean - y_mean) - (x_se + y_se)
 
-    return statistic, pvalue
+    return statistic, significant
+
