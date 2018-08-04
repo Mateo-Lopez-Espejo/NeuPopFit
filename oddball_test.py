@@ -12,6 +12,7 @@ import oddball_xforms as ox
 import oddball_post_procecing as opp
 # import single_oddball_processing_180705 as sop
 import single_oddball_processing_180711 as sop
+import single_oddball_processing_180801 as new_sop
 # reload modules just in case??
 import imp
 
@@ -115,12 +116,13 @@ def get_superepoch_subset():
     return epochs, newepochs
 
 
-def get_signal_SI():
+def get_signal_SI(sub_epoch=None, super_epoch=None, shuffle_test=True, repetitions=100):
     test_ctx = jl.load(final_ctx_cache)
     rec = test_ctx['val'][0]
     sig = rec['resp']
-    SI = of.get_signal_SI(sig, None)
-    return SI
+    real_SI, range_SI = of.get_signal_SI(sig, sub_epoch=sub_epoch, super_epoch=super_epoch,
+                          shuffle_test=shuffle_test, repetitions=repetitions)
+    return real_SI, range_SI
 
 
 def get_signal_activity():
@@ -429,5 +431,10 @@ def act_bug():
 
     return ctx
 
-
+def full_pval():
+    ''' an example with abucnh of -1 values in SI'''
+    cellid = 'chn002h-a1'
+    modelname = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+    ctx = new_sop.single_oddball_processing(cellid, 296, modelname, False, False)
+    return ctx
 

@@ -16,6 +16,12 @@ shortname1 = 'Linear model'
 modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname2 = 'STP model'
 
+# this block for the stp vs wc-stp
+# modelname1 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname1 = 'STP STRF prediction'
+# modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname2 = 'WC-STP STRF prediction'
+
 modelnames = [modelname1, modelname2]
 shortnames = [shortname1, shortname2]
 
@@ -51,7 +57,8 @@ pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__f
 # tail = '180710_DF_all_parms_all_load_only_jal_jackknife'
 
 # this load only contain envelope fits but includesthe STP with channel crosstalk
-tail = '180718_DF_only_env_only_jal_jackknife_3_architectures'
+# tail = '180718_DF_only_env_only_jal_jackknife_3_architectures' # old fitting
+tail = '180803_DF_only_env_only_jal_jackknife_3_architectures'  # newer fitting
 
 filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)

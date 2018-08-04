@@ -155,10 +155,12 @@ def merge_val(val, **context):
     return {'val': new_val}
 
 
-def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
+def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, shuffle_test=False, repetitions=100,
+                              **context):
     # calculates SSA index and activity index for each validation set
     # initialzies two lists of nested dictionaries
     SI_list = list()
+    SI_pval_list= list()
     RA_list = list()
 
     for this_val in val:
@@ -171,6 +173,7 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
 
         # initializes dictionaries for the superepochs
         SI_dict = dict.fromkeys(super_epoch)
+        SI_pval_dict = dict.fromkeys(super_epoch)
         RA_dict = dict.fromkeys(super_epoch)
 
         for sup_ep in super_epoch:
@@ -178,8 +181,11 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
             if sup_ep == 'Jitter_Both':
                 sup_ep = None
 
-            SI = of.get_recording_SI(this_val, sub_epoch, super_epoch=sup_ep)
-            SI_dict[dict_key] = SI
+            SI_output = of.get_recording_SI(this_val, sub_epoch, super_epoch=sup_ep,
+                                     shuffle_test=shuffle_test, repetitions=repetitions)
+
+            SI_dict[dict_key] = SI_output[0]
+            SI_pval_dict[dict_key] = SI_output[1]
 
             RA = of.get_recording_activity(this_val, sub_epoch, super_epoch=sup_ep, baseline=baseline)
             RA_dict[dict_key] = RA
@@ -187,13 +193,25 @@ def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline,
         SI_list.append(SI_dict)
         RA_list.append(RA_dict)
 
+        if shuffle_test == True:
+            SI_pval_list.append(SI_pval_dict)
+
     # tunrs the lists of nested dictionaries into nested dictionaries of lists
     SI = opp.swap_struct_levels(SI_list, as_array=True)
     RA = opp.swap_struct_levels(RA_list, as_array=True)
 
+    if shuffle_test == True:
+        SIpval = opp.swap_struct_levels(SI_pval_list, as_array=True)
+
     # update modelspecs with the adecuate metadata
     modelspecs[0][0]['meta']['SSA_index'] = SI
     modelspecs[0][0]['meta']['activity'] = RA
+    if shuffle_test == True:
+        modelspecs[0][0]['meta']['SI_pvalue'] = SIpval
+    elif shuffle_test == False:
+        modelspecs[0][0]['meta']['SI_pvalue'] = None
+
+
     return modelspecs
 
 

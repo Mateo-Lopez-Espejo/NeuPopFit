@@ -138,7 +138,8 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
     # adds oddball metrics nfold
     jitters = ['Jitter_On', 'Jitter_Off', 'Jitter_Both']
     xfspec.append(['oddball_xforms.calculate_oddball_metrics',
-                   {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence'},
+                   {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence',
+                    'shuffle_test': True, 'repetitions': 1000},
                    ['val', 'modelspecs'], ['modelspecs']])
 
     # merge validation recordings
@@ -163,7 +164,7 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
     modelspecs[0][0]['meta']['modelpath'] = destination
     modelspecs[0][0]['meta']['figurefile'] = destination + 'figure.0000.png'
 
-    # save results Todo figure out the good way of saving stuff
+    # save results todo reactivate the saving dude!
     log.info('Saving modelspec(s) to {0} ...'.format(destination))
     xforms.save_analysis(destination,
                          recording=ctx['rec'],
@@ -184,6 +185,6 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
 testing suit
 
 cellid = 'gus037d-a2'
-modelname = 'stp2_fir2x15_lvl1_basic-nftrial'
-single_oddball_processing(cellid=cellid, modelname=modelname, force_refit=False, save_in_DB = False)
+modelname = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+single_oddball_processing(cellid=cellid, batch=296, modelname=modelname, force_rerun=False, save_in_DB = False)
 '''

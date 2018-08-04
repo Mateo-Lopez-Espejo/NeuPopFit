@@ -7,6 +7,7 @@ import copy
 import nems_db.baphy as nb
 import nems_db.db as db
 import warnings
+import oddball_post_procecing as opp
 
 
 # Functions working on signal objects
@@ -71,7 +72,7 @@ def set_signal_oddball_epochs(signal):
     sub_epochs_keys = ['PreStimSilence', 'PostStimSilence']
     sub_epochs_dict = {key: oddball_epochs.loc[
         oddball_epochs.name == key, ['start', 'end']
-    ].sort_values(['end']).as_matrix() # Todo Solve the as_matrix replaced by value
+    ].sort_values(['end']).values
                        for key in sub_epochs_keys}
 
     # checks size congruence of  PreStimSilence and PostStimSilence
@@ -95,7 +96,7 @@ def set_signal_oddball_epochs(signal):
     # iterates over every oddball epoch and saves the intersectiosn with PreStimSilence Stim and PostStimSilence
     for _, oddball_key in key_mapping.items():
         oddball_matrix = oddball_epochs.loc[oddball_epochs.name == oddball_key, ['start', 'end']
-        ].sort_values(['end']).as_matrix() # Todo Solve the as_matrix replaced by value
+        ].sort_values(['end']).values
 
         for sub_epoch_name, sub_epoch_matrix in sub_epochs_dict.items():
             oddball_subepoch_matrix = ep.epoch_intersection(sub_epoch_matrix, oddball_matrix)
@@ -326,7 +327,7 @@ def extract_signal_oddball_epochs(signal, sub_epoch, super_epoch):
     return folded_signal
 
 
-def get_signal_SI(signal, sub_epoch, super_epoch):
+def get_signal_SI(signal, sub_epoch, super_epoch, shuffle_test=False, repetitions=100):
     '''
         Given the recording from an SSA object, returns the SSA index (SI) as defined by Ulanovsky et al (2003)
 
@@ -335,46 +336,122 @@ def get_signal_SI(signal, sub_epoch, super_epoch):
         ----------
         recording : A Recording object
             Generally the output of `model.evaluate(phi, data)`??
-        subset : string ['resp' or 'pred']
-            Name of the subset of data from which to calculate the SI,
-            either the response 'resp' or prediction 'pred'
+        sub_epoch : None, str, list of str
+            if none, returns the whole REFERENCE epoch, otherwise returns the "sub epoch" contained within REFERENCE
+            it should be 'Stim', 'PreStimSilence' or 'PostStimSilence'
+        super_epoch: None, str, list of str
+            if none, returns all REFERENCE events, otherwise returns REFERENCES(or sub epochs) contained within super_epoch
+            in the context of the oddball experiments it should be 'Jitter_ON', 'Jitter_Off' or 'Jitter_Both'
+        shuffle_test: test significance ofe SI by calculating SI of recordings with shuffled sound reproduction rate
+            (onset, std, dev).
+        repetitions: number of calculation of the suffled SI
 
         Returns
         -------
         SSA_index_dict : dict
             Dictionary containing the SI values for each of the sound frequency channels and independent of frequency
 
+        if shuffle_test is True: SSA_index_dict, shuffled_SI_dict
+
         '''
+
+    # defines internal function to avoide verbose
+    def _SI_from_folded(folded):
+        # calculates PSTH
+        PSTHs = {oddball_epoch_name: np.squeeze(np.nanmean(epoch_data, axis=0))
+                 for oddball_epoch_name, epoch_data in folded.items()}
+
+        # integrates values across time
+        integrated_resp = {sound_type: np.sum(win_resp) for sound_type, win_resp in PSTHs.items()}
+
+        # calculates SSA index (SI) for each frequency channel and for the cell
+        calculated_SI = dict.fromkeys(['f1', 'f2', 'cell'])
+
+        for key in calculated_SI.keys():
+            # single frequencies SI
+            if key in ['f1', 'f2']:
+                std_key = '{}_{}'.format(key, 'std')
+                dev_key = '{}_{}'.format(key, 'dev')
+                calculated_SI[key] = ((integrated_resp[dev_key] - integrated_resp[std_key]) /
+                                       (integrated_resp[dev_key] + integrated_resp[std_key]))
+            # Full cell SI
+            elif key == 'cell':
+                calculated_SI[key] = ((integrated_resp['f1_dev'] + integrated_resp['f2_dev'] -
+                                        integrated_resp['f1_std'] - integrated_resp['f2_std']) /
+                                       (integrated_resp['f1_dev'] + integrated_resp['f2_dev'] +
+                                        integrated_resp['f1_std'] + integrated_resp['f2_std']))
+
+        return calculated_SI
 
     folded_oddball = extract_signal_oddball_epochs(signal, sub_epoch=sub_epoch, super_epoch=super_epoch)
 
-    # Todo if folded_oddball is NaN, sets all values of SI to NaN
+    SSA_index_dict = _SI_from_folded(folded_oddball)
 
-    # calculates PSTH
-    PSTHs = {oddball_epoch_name: np.squeeze(np.nanmean(epoch_data, axis=0))
-             for oddball_epoch_name, epoch_data in folded_oddball.items()}
+    # shuffle test
+    if shuffle_test is True:
+        # if all SSA_index_dict values are nan, sets pvals as NaNs and skips shufflign and repeated calculation
+        is_SI_nan = np.isnan(np.array(list(SSA_index_dict.values())))
+        if len(is_SI_nan) == is_SI_nan.sum(): # compares the number of items with the number of Trues i.e. nans
+            return SSA_index_dict, SSA_index_dict
 
-    # integrates values across time
-    integrated_resp = {sound_type: np.sum(win_resp) for sound_type, win_resp in PSTHs.items()}
+        # counts the number of responses per channel and presentation rate.
+        sound_type_count = {sound_type: arr.shape[0] for sound_type, arr in folded_oddball.items()}
 
-    # calculates different version of SSA index (SI)
-    SSA_index_dict = dict.fromkeys(['f1', 'f2', 'cell'])
+        # pools matrixes by frequency channel
+        pooled_by_channel = dict.fromkeys(['f1', 'f2'])
+        for key in pooled_by_channel.keys():
+            pooled_by_channel[key] = np.concatenate([sound_data for sound_type, sound_data in folded_oddball.items() if
+                                                  sound_type.startswith(key) and sound_data.size != 0])
 
-    for key, val in SSA_index_dict.items():
-        # single frequencies SI
-        if key in ['f1', 'f2']:
-            std_key = '{}_{}'.format(key, 'std')
-            dev_key = '{}_{}'.format(key, 'dev')
-            SSA_index_dict[key] = ((integrated_resp[dev_key] - integrated_resp[std_key]) /
-                                   (integrated_resp[dev_key] + integrated_resp[std_key]))
-        # Full cell SI
-        elif key == 'cell':
-            SSA_index_dict[key] = ((integrated_resp['f1_dev'] + integrated_resp['f2_dev'] -
-                                    integrated_resp['f1_std'] - integrated_resp['f2_std']) /
-                                   (integrated_resp['f1_dev'] + integrated_resp['f2_dev'] +
-                                    integrated_resp['f1_std'] + integrated_resp['f2_std']))
+        # does the repeated suffling and SI measurements
+        counter = 0
+        list_of_SI_dicts = list()
 
-    return SSA_index_dict
+        while counter < repetitions:
+            # randomly shuffles the identities of sound responses, shuffles in place
+            for channel, arr in pooled_by_channel.items():
+                np.random.shuffle(arr)
+
+            shuffled_sound_type = dict()
+            for channel, arr in pooled_by_channel.items():
+                # selects the indexes to use for array slicing
+                a = sound_type_count['{}_onset'.format(channel)]
+                b = sound_type_count['{}_std'.format(channel)]
+                c = sound_type_count['{}_dev'.format(channel)]
+                shuffled_sound_type['{}_onset'.format(channel)] = arr[:a]
+                shuffled_sound_type['{}_std'.format(channel)] = arr[a:a+b]
+                shuffled_sound_type['{}_dev'.format(channel)] = arr[a+b:]
+                if shuffled_sound_type['{}_dev'.format(channel)].shape[0] != c:
+                    raise ValueError('bad slicing')
+
+            this_rep_SI = _SI_from_folded(shuffled_sound_type)
+            list_of_SI_dicts.append(this_rep_SI)
+
+            counter+=1
+
+        # swap the data structure: makes a list of dicts with signle SI values per key into a dict with list of Si values
+        # per each key
+        shuffled_SI_dict = opp.swap_struct_levels(list_of_SI_dicts)
+
+        # calculates p value as the percentage of shuffled results bigger than possitive SI or smaller than negative SI vals
+        SI_pvals_dict = dict()
+        for sound_type, shuffled_SI in shuffled_SI_dict.items():
+            real_SI = SSA_index_dict[sound_type]
+            shuffle_mean = np.nanmean(shuffled_SI)
+            # checks what tail of the distribution to use
+            if real_SI>=shuffle_mean: # right tail
+                pval = np.sum(shuffled_SI > real_SI) / len(shuffled_SI)
+            elif real_SI < shuffle_mean:  # right tail
+                pval = np.sum(shuffled_SI < real_SI) / len(shuffled_SI)
+            elif np.isnan(real_SI):
+                pval = np.nan
+
+            SI_pvals_dict[sound_type] = pval
+
+        return SSA_index_dict, SI_pvals_dict
+
+
+    return SSA_index_dict, None
 
 
 def get_signal_activity(signal, sub_epoch, super_epoch, baseline='silence', metric='z_score'):
@@ -576,7 +653,7 @@ def as_rasterized_point_process(recording, scaling):
     return recording
 
 
-def get_recording_SI(recording, sub_epoch, super_epoch):
+def get_recording_SI(recording, sub_epoch, super_epoch, shuffle_test=False, repetitions=100):
     signals = recording.signals
 
     # for SI calculates only for resp and pred, checks if both signals are in the recording
@@ -586,10 +663,13 @@ def get_recording_SI(recording, sub_epoch, super_epoch):
     else:
         raise ValueError("The recording does not have 'resp' and 'pred' signals")
 
-    SI_dict = {sig_key: get_signal_SI(signal, sub_epoch, super_epoch) for sig_key, signal in signals.items() if
-               sig_key in relevant_keys}
+    SI_dict = {sig_key: get_signal_SI(signal, sub_epoch, super_epoch, shuffle_test, repetitions)[0]
+               for sig_key, signal in signals.items() if sig_key in relevant_keys}
 
-    return SI_dict
+    SI_pval_dict = {sig_key: get_signal_SI(signal, sub_epoch, super_epoch, shuffle_test, repetitions)[1]
+                    for sig_key, signal in signals.items() if sig_key in relevant_keys}
+
+    return SI_dict, SI_pval_dict
 
 
 def get_recording_activity(recording, sub_epoch, super_epoch, baseline='silence'):
