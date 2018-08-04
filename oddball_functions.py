@@ -445,6 +445,8 @@ def get_signal_SI(signal, sub_epoch, super_epoch, shuffle_test=False, repetition
                 pval = np.sum(shuffled_SI < real_SI) / len(shuffled_SI)
             elif np.isnan(real_SI):
                 pval = np.nan
+            else:
+                pval = np.nan
 
             SI_pvals_dict[sound_type] = pval
 

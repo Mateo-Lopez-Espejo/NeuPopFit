@@ -431,10 +431,8 @@ def act_bug():
 
     return ctx
 
-def full_pval():
+def full_pval(cellid='chn002h-a1', modelname='odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'):
     ''' an example with abucnh of -1 values in SI'''
-    cellid = 'chn002h-a1'
-    modelname = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
     ctx = new_sop.single_oddball_processing(cellid, 296, modelname, False, False)
     return ctx
 
