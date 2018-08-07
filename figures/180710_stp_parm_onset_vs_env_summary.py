@@ -29,6 +29,12 @@ resp_pred = 'pred'
 old = jl.load('/home/mateo/batch_296/171115_all_subset_fit_eval_combinations_DF')
 old = oddball_DF.relevant_from_old_DF(old)
 
+# function deprecated. DF deleted. to recreated pull from modelnames :
+# ['odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+#  'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+#  'odd1_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
+#  'odd1_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal']
+
 new = jl.load('/home/mateo/oddball_analysis/pickles/180710_DF_all_parms_all_load_only_jal')
 cellids = old.cellid.unique().tolist()
 

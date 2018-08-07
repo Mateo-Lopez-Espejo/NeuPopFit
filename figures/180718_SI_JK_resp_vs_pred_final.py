@@ -55,7 +55,8 @@ pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__f
 # tail = '180710_DF_all_parms_all_load_only_jal_jackknife'
 
 # this load only contain envelope fits but includesthe STP with channel crosstalk
-tail = '180718_DF_only_env_only_jal_jackknife_3_architectures'
+# tail = '180718_DF_only_env_only_jal_jackknife_3_architectures'
+tail = '180806_DF_only_env_only_jal_jackknife_3_architectures_SI_pval'
 
 filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)

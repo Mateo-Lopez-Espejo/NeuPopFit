@@ -303,7 +303,7 @@ def single_specs_to_DF(cellid, batch, modelname):
     frames = list()
 
     # this list defines my specific the keys of the metadata to be pulled
-    parameters = ['SSA_index', 'activity', ]
+    parameters = ['SSA_index', 'activity', 'SI_pvalue']
     for parameter in parameters:
         # generates a df for each parameter
         parm_DF = get_from_meta(modelspecs, key=parameter, as_DF=True, column_names=['Jitter', 'resp_pred', 'stream'])

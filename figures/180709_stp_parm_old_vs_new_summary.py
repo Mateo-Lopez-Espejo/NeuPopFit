@@ -25,6 +25,8 @@ colors = ['green', 'red']
 old = jl.load('/home/mateo/batch_296/171115_all_subset_fit_eval_combinations_DF')
 old = oddball_DF.update_old_format(old)
 
+# function deprecated, this DF no longer exists. If really necesary, recreate with modelnames :'odd_stp2_fir2x15_lvl1_basic-nftrial_est-jal_val-jal',
+#        'odd_fir2x15_lvl1_basic-nftrial_est-jal_val-jal'
 new = jl.load('/home/mateo/oddball_analysis/pickles/180709_DF_all_parms_only_jal')
 cellids = old.cellid.unique().tolist()
 

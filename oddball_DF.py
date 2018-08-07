@@ -195,7 +195,7 @@ def goodness_of_fit(DF, metric='r_test', modelnames=None, plot=False):
 
 
 def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
-    # todo implement make r_tidy by a signle column, it should be easier.
+    # todo implement make tidy by a signle column, it should be easier.
     # todo implement pivot by multiple columns
     if pivot_by is None:
         raise NotImplementedError('poke Mateo')
@@ -265,3 +265,20 @@ def jackknifed_sign(x, y):
 
     return statistic, significant
 
+
+
+
+def collapse_pvalues(DF):
+    '''
+    takes the mean of SI_pvalues obtained from the jackknifed signal. leaves all other parameters unaltered
+    :param DF: A pristine DF
+    :return: A copy of the DF but with all values asociated with pvalue as a single number
+    '''
+
+    wdf = DF.copy()
+    filtered = wdf.loc[wdf.parameter=='SI_pvalue', 'value']
+    arr = np.stack(filtered.values)
+    jack_mean = np.nanmean(arr, axis=1)
+    wdf.loc[wdf.parameter == 'SI_pvalue', 'value'] = jack_mean
+
+    return  wdf

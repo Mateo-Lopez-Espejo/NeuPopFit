@@ -139,12 +139,18 @@ def single_oddball_processing(cellid, batch, modelname, force_rerun=False, save_
     jitters = ['Jitter_On', 'Jitter_Off', 'Jitter_Both']
     xfspec.append(['oddball_xforms.calculate_oddball_metrics',
                    {'sub_epoch': 'Stim', 'super_epoch': jitters, 'baseline': 'silence',
-                    'shuffle_test': True, 'repetitions': 1000},
+                    'shuffle_test': False},
                    ['val', 'modelspecs'], ['modelspecs']])
 
     # merge validation recordings
 
     xfspec.append(['oddball_xforms.merge_val', {}])
+
+    # add SI significance calculation
+    xfspec.append(['oddball_xforms.calculate_SI_pvalue',
+                   {'sub_epoch': 'Stim', 'super_epoch':jitters, 'baseline': 'silence',
+                    'shuffle_test': True, 'repetitions': 1000},
+                   ['val', 'modelspecs'], ['modelspecs']])
 
     # add metrics correlation
     xfspec.append(['nems.analysis.api.standard_correlation', {},
@@ -186,5 +192,5 @@ testing suit
 
 cellid = 'gus037d-a2'
 modelname = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-single_oddball_processing(cellid=cellid, batch=296, modelname=modelname, force_rerun=False, save_in_DB = False)
+ctx = single_oddball_processing(cellid=cellid, batch=296, modelname=modelname, force_rerun=False, save_in_DB = False)
 '''

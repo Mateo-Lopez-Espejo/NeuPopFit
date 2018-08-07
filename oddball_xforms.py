@@ -270,6 +270,45 @@ def jk_corrcoef(val, modelspecs, njacks=20, **context):
 
     return modelspecs
 
+
+def calculate_SI_pvalue(val, modelspecs, sub_epoch, super_epoch, baseline, shuffle_test=False, repetitions=100,
+                              **context):
+
+    if len(val) != 1:
+        raise ValueError('validation contains multiple signals. Only one required. use after reverse jackknife')
+
+    this_val = val[0]
+
+    this_val = this_val.apply_mask()
+
+    valid_jitters = {'Jitter_Off', 'Jitter_On', 'Jitter_Both'}
+    if not set(super_epoch).issubset(valid_jitters):
+        raise ValueError("super_epoch must be a subset of {}".format(valid_jitters))
+
+    # initializes dictionaries for the superepochs
+    SI_dict = dict.fromkeys(super_epoch)
+    SI_pval_dict = dict.fromkeys(super_epoch)
+
+    for sup_ep in super_epoch:
+        dict_key = sup_ep
+        if sup_ep == 'Jitter_Both':
+            sup_ep = None
+
+        SI_output = of.get_recording_SI(this_val, sub_epoch, super_epoch=sup_ep,
+                                 shuffle_test=shuffle_test, repetitions=repetitions)
+
+        SI_dict[dict_key] = SI_output[0]
+        SI_pval_dict[dict_key] = SI_output[1]
+
+    # tunrs the lists of nested dictionaries into nested dictionaries of lists
+
+    # update modelspecs with the adecuate metadata
+    modelspecs[0][0]['meta']['SI_pvalue'] = SI_pval_dict
+
+
+    return modelspecs
+
+
 # def calculate_oddball_metrics(val, modelspecs, sub_epoch, super_epoch, baseline, **context):
 #     # calculates SSA index and activity index for the validatio. asumes unique validation recording.
 #     if len(val) != 1:
