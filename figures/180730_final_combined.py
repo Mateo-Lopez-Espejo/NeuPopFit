@@ -10,20 +10,47 @@ import os
 
 #### ploting parameters
 
-# this block for act vs pred SI across linear and STP models
-modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-shortname1 = 'Linear model'
-modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-shortname2 = 'STP model'
+# this block for the linear vs stp
+# modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname1 = 'LN STRF'
+# modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname2 = 'local STP STRF'
 
 # this block for the stp vs wc-stp
 # modelname1 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'STP STRF prediction'
+# shortname1 = 'local STP STRF '
 # modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'WC-STP STRF prediction'
+# shortname2 = 'RW-STP STRF'
+
+# this block for the linear vs wc-stp
+modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+shortname1 = 'LN STRF'
+modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+shortname2 = 'RW-STP STRF'
+
+# this block for the global stp vs independent stp
+# modelname1 = 'odd.1_fir.2x15-stp.2-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname1 = 'global STP STRF'
+# modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+# shortname2 = 'local STP STRF'
 
 modelnames = [modelname1, modelname2]
 shortnames = [shortname1, shortname2]
+
+
+# this block specifies models for the barplot comparing all architectures
+LN = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+LN_name = 'LN_STRF'
+glob_STP = 'odd.1_fir.2x15-stp.2-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+glob_STP_name = 'global STP STRF'
+loc_STP = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+loc_STP_name = 'local STP STRF'
+RW_STP = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
+RW_STP_name = 'RW STP STRF'
+
+all_models = {LN_name: LN, glob_STP_name: glob_STP,
+              loc_STP_name: loc_STP, RW_STP_name: RW_STP}
+
 
 color1 = '#FDBF76'  # yellow for linear model
 color2 = '#CD679A'  # pink for stp model
@@ -34,7 +61,7 @@ subtitle1 = 'r_test comparison'
 subtitle2 = 'SSA Index (SI): calculated from response vs prediction'
 
 # parameters
-parameters = ['jk_r_test', 'SSA_index']
+parameters = ['jk_r_test', 'SSA_index', 'SI_pvalue']
 
 # stream = ['f1', 'f2', 'cell']
 stream = ['cell']
@@ -44,11 +71,17 @@ Jitter = ['Jitter_Both']
 
 # goodness of fit filter
 metric = 'r_test'
-threshold = 0.15
+threshold = 0
 
 # limit to force values to
 lowerlimit = -0.2
 
+# SI pvlaue
+alpha = 0.05
+pval_set = 'resp'
+
+
+########################################################################################################################
 ######## script starts here
 # test files. the paths will be different between my desktop and laptop.
 pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__file__)))[0])
@@ -58,7 +91,9 @@ pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__f
 
 # this load only contain envelope fits but includesthe STP with channel crosstalk
 # tail = '180718_DF_only_env_only_jal_jackknife_3_architectures' # old fitting
-tail = '180803_DF_only_env_only_jal_jackknife_3_architectures'  # newer fitting
+# tail = '180803_DF_only_env_only_jal_jackknife_3_architectures'  # newer fitting
+tail = '180813_DF_only_env_only_jal_jackknife_4_architectures_full_SI_pval'
+
 
 filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)
@@ -67,15 +102,16 @@ loaded = jl.load(filename)
 
 DF = loaded.copy()
 
-# quality_filtered = odf.filter_by_metric(DF, metric=metric, threshold= threshold)
-
 ff_param = DF.parameter.isin(parameters)
 ff_model = DF.modelname.isin(modelnames)
 ff_jitter = DF.Jitter.isin(Jitter) | pd.isnull(DF.Jitter)
 ff_stream = DF.stream.isin(stream) | pd.isnull(DF.stream)
+ff_badcells = ~DF.cellid.isin(['chn019a-d1', 'chn022c-a1', 'chn019a-c1']) # this cells have a nan value for the response SI
 
-pre_filtered = DF.loc[ff_param & ff_model & ff_jitter & ff_stream, :]
+pre_filtered = DF.loc[ff_param & ff_model & ff_jitter & ff_stream & ff_badcells, :]
 
+
+########################################################################################################################
 # makes two versions of a r_tidy DF, one for each parameter
 ### r_test
 print(' \nleft plot')
@@ -95,9 +131,11 @@ for short in shortnames:
     print('{} mean r_test: {:.3f}'.format(short, np.mean(r_tidy[short])))
 
 
+
+########################################################################################################################
 ### SI
 print(' \nright plot')
-goodcells = odf.filter_by_metric(DF, threshold=0.2)
+goodcells = odf.filter_by_metric(DF,metric=metric, threshold=threshold)
 ff_goodcell = pre_filtered.cellid.isin(goodcells.cellid.unique())
 ff_ssa = pre_filtered.parameter == 'SSA_index'
 si_filt = pre_filtered.loc[ff_ssa & ff_goodcell, :]
@@ -115,9 +153,6 @@ si_tidy = si_tidy.replace({modelname1: shortname1,
 # mean of Jackknife
 si_tidy = odf.collapse_jackknife(si_tidy, columns=['resp', 'pred'])
 
-# drops columns with na
-si_tidy = si_tidy.dropna()
-
 # values minor to -0.2 are forced to -0.2
 vals = si_tidy.loc[:, ['resp','pred']].values
 ff_outlier = vals < lowerlimit
@@ -125,16 +160,56 @@ vals[ff_outlier] = lowerlimit
 si_tidy['resp'] = vals[:, 0]
 si_tidy['pred'] = vals[:, 1]
 
+# repeats tidy for SI pvaluefor resp and "cell" stream
+ff_goodcell = pre_filtered.cellid.isin(goodcells.cellid.unique())
+ff_ssa = pre_filtered.parameter == 'SI_pvalue'
+pv_filt = pre_filtered.loc[ff_ssa & ff_goodcell, :]
+# makes tidy
+more_parms = ['modelname', 'cellid']
+pivot_by = 'resp_pred'
+values = 'value'
+pv_tidy = odf.make_tidy(pv_filt, pivot_by, more_parms, values)
+# changes names of modelnames
+pv_tidy = pv_tidy.replace({modelname1: shortname1,
+                           modelname2: shortname2})
+
+# changes pvalues to significance boolean and changes name to include number of points complying
+pv_tidy['significant'] = pv_tidy[pval_set] <= alpha
+# since reponse is model independent, looks at SI significance in a single model
+pv_single_mod = pv_tidy.loc[pv_tidy.modelname==shortname1, :]
+sig_count = pv_single_mod.significant.sum()
+nsig_count = (pv_single_mod.shape[0] - sig_count)
+print('{}/{} cells with significant SI using shuffle test'.format(sig_count, pv_single_mod.shape[0]))
+SI_significant_name = 'p<{} (n={})'.format(alpha, sig_count)
+SI_Nsignificant_name = 'NS (n={})'.format(nsig_count)
+SI_significances = [SI_significant_name, SI_Nsignificant_name]
+pv_tidy.significant.replace({True: SI_significant_name, False: SI_Nsignificant_name}, inplace=True)
+
+# renames columns
+pv_tidy.rename(columns={'resp': 'resp_pval', 'pred': 'pred_pval'}, inplace=True)
+
+# concatenates the pvalue column into the si_mse DF, uses indexes to make sure of proper alignment
+si = si_tidy.set_index(['cellid', 'modelname'])
+pv = pv_tidy.set_index(['cellid', 'modelname'])
+concat = pd.concat([si,pv], axis=1)
+si_toplot = concat.reset_index()
+
+# drops rows with na
+si_toplot =si_toplot.dropna()
+
 # gets mean and correlation coeficient
 for short in shortnames:
-    wdf = si_tidy.loc[si_tidy.modelname==short, :]
+    ff_short = si_toplot.modelname==short
+    ff_pval = si_toplot.significant==SI_significant_name
+
+    wdf = si_toplot.loc[ff_short & ff_pval, :]
     resp = wdf['resp'].values
     pred = wdf['pred'].values
     linreg = sst.linregress(resp, pred)
-    print('{}: resp mean {:.3f}, pred mean {:.3f}, corcoef {:.3f}'.format(short, np.mean(resp), np.mean(pred), linreg.rvalue))
+    print('{}: resp mean {:.3f}, pred mean {:.3f}, corcoef {:.3f}, slope {:.3f}'.
+          format(short, np.mean(resp), np.mean(pred), linreg.rvalue, linreg.slope))
 
-
-
+########################################################################################################################
 ### plotting
 fig, axes = plt.subplots(1, 2)
 axes = np.ravel(axes)
@@ -184,12 +259,36 @@ legend.get_frame().set_linewidth(0.0)
 si_ax = axes[1]
 
 for model, color in zip(shortnames, model_colors):
-    ff_model = si_tidy.modelname == model
-    toplot = si_tidy.loc[ff_model]
-    x = toplot.resp
-    y = toplot.pred
-    #si_ax.scatter(x, y, color=color, label=model)
-    sns.regplot(x, y, ax=si_ax, color=color, label=model, ci=None)
+    # plots regression lines independent of significance
+
+    ff_model = si_toplot.modelname == model
+    # full_reg = si_toplot.loc[ff_model]
+    # z = full_reg.resp
+    # w = full_reg.pred
+    # sns.regplot(z, w, ax=si_ax, color='black', scatter=False, ci=None)
+
+    for sig, marker in zip(SI_significances, ['o', 'v']):
+
+        ff_sig = si_toplot.significant == sig
+        toplot = si_toplot.loc[ff_model & ff_sig]
+        x = toplot.resp
+        y = toplot.pred
+
+        if sig ==  SI_significant_name:
+            # if significant, plots with linear regression
+            sig_scat_kws = {'s':30}
+            lab = '{} {}'.format(model, sig)
+            sns.regplot(x, y, ax=si_ax, color=color, marker=marker, label=lab, ci=None,
+                        scatter_kws=sig_scat_kws)
+
+        elif sig ==SI_Nsignificant_name:
+            # if non significant, plots whithout linear regression, smaller scatter, shade of gray?
+            nsig_scat_kws = {'s':10}
+            lab = '{} {}'.format(model, sig)
+            sns.regplot(x, y, ax=si_ax, color=color, marker=marker, fit_reg=False, label=lab, ci=None,
+                        scatter_kws=nsig_scat_kws)
+
+
 
 # adds format
 # vertical an horizontal lines at 0

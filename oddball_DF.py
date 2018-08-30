@@ -135,6 +135,14 @@ def filter_by_metric(DF, metric='r_test', threshold=0):
         nonan = noinf.dropna()
         metric_DF = nonan.reset_index()
         metric_DF.columns = ['unique_ID', 'value']
+
+    elif metric=='SI_pvalue':
+        ff_jitter = wdf.Jitter == 'Jitter_Both'
+        ff_resp_pred = wdf.resp_pred == 'resp'
+        ff_stream = wdf.stream == 'cell'
+        filtered = wdf.loc[ff_metric & ff_jitter & ff_resp_pred & ff_stream, :]
+        metric_DF = filtered
+
     else:
         metric_DF = wdf.loc[ff_metric, ['cellid', 'unique_ID', 'value']]
 
@@ -142,7 +150,10 @@ def filter_by_metric(DF, metric='r_test', threshold=0):
     metric_DF = collapse_jackknife(metric_DF)
 
     # from the metric DF select the values that fullfill the criterion
-    ff_criterion = metric_DF.value >= threshold
+    if metric == 'SI_pvalue':
+        ff_criterion = metric_DF.value <= threshold
+    else:
+        ff_criterion = metric_DF.value >= threshold
     good_files = metric_DF.loc[ff_criterion, 'unique_ID'].unique()
     good_cells = metric_DF.loc[ff_criterion, 'cellid'].unique()
 
@@ -201,12 +212,11 @@ def make_tidy(DF, pivot_by=None, more_parms=None, values='value'):
         raise NotImplementedError('poke Mateo')
 
     if more_parms is None:
-        more_parms = [col for col in DF.columns if col != values]
+        more_parms = [col for col in DF.columns if col !=values and col !=pivot_by]
 
     # sets relevant  indexes
-    newindexes = copy.copy(more_parms)
-    newindexes.append(pivot_by)
-    indexed = DF.set_index(newindexes)
+    more_parms.append(pivot_by)
+    indexed = DF.set_index(more_parms)
     # holds only the value column
     indexed = pd.DataFrame(index=indexed.index, data=indexed[values])
     # checks for duplicates
@@ -267,6 +277,8 @@ def jackknifed_sign(x, y):
 
 
 
+
+# deprecated functions
 
 def collapse_pvalues(DF):
     '''

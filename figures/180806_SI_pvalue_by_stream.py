@@ -59,7 +59,8 @@ pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__f
 # tail = '180710_DF_all_parms_all_load_only_jal_jackknife'
 
 # this load only contain envelope fits but includesthe STP with channel crosstalk
-tail = '180806_DF_only_env_only_jal_jackknife_3_architectures_SI_pval'
+tail = '180806_DF_only_env_only_jal_jackknife_3_architectures_JK_SI_pval'
+tail = '180813_DF_only_env_only_jal_jackknife_4_architectures_full_SI_pval'
 
 filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)
@@ -86,7 +87,13 @@ pivot_by = 'parameter'
 values = 'value'
 tidy_SI_vs_pval = odf.make_tidy(filtered, pivot_by, more_parms, values)
 
+
+# renames the models fore readability
+tidy_SI_vs_pval = tidy_SI_vs_pval.replace({modelname1: shortname1,
+                            modelname2: shortname2})
+
 lm = sns.lmplot(x='SSA_index', y='SI_pvalue', hue='resp_pred', col='stream', row='modelname', data=tidy_SI_vs_pval)
+
 
 # filter by parameters
 tidy_dict = dict.fromkeys(parameters)
@@ -131,6 +138,12 @@ SI_pval.SI_pvalue.replace({True: sig_name, False: nsig_name}, inplace=True)
 
 tidy['SI_pvalue'] = SI_pval['SI_pvalue']
 
+# renames the models fore readability
+tidy = tidy.rename(columns={modelname1: shortname1,
+                            modelname2: shortname2})
+
+
+
 
 pick_id = tidy.cellid.tolist()
 
@@ -146,7 +159,7 @@ scatter_kws = {'alpha': 0.8,
 g = sns.lmplot(x='f1', y='f2', hue='SI_pvalue', col='modelname', row='resp_pred',
                aspect =1, legend_out=False, palette=palette, scatter_kws=scatter_kws,
                fit_reg=False, x_jitter=0.01, y_jitter=0.01,
-               ci=None, data=SI_pval)
+               ci=None, data=tidy)
 
 fig = g.fig
 axes = g.axes
