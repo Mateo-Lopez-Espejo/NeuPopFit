@@ -257,11 +257,11 @@ def cartoon(ctx):
 def model_progression(x, y, data, mean, ax, order, palette, collapse_by=None, **pltKwargs):
     '''
     for every cell in the DF plots a point in each column corresponding to a model, and draws a line conecting the points
-    this shows the porgressoin of the value across models.
+    this shows the progression of the value across models in a cell dependent manner
 
     :param x: str, column name corresponding to the categorical variable
     :param y: str, column name corresponding to the values to plot
-    :param data: DF in tidy format, with a column correpsonding to a categorical variable, and another to numerical values
+    :param data: DF in tidy format, with a column corresponding to a categorical variable, and another to numerical values
     :param mean: bool, whether to plot the mean of the population progression
     :param ax: a matplotlib ax object
     :param order: list, tuple. the order in which the values of the categorical variables are plotted in the x axis
@@ -272,7 +272,7 @@ def model_progression(x, y, data, mean, ax, order, palette, collapse_by=None, **
     # hold names of the to be columns
     col_names = set(data[x].unique())
     if col_names != set(order):
-        raise ValueError('parameter Order specified vategory levels not in x')
+        raise ValueError('parameter Order specified category levels not in x')
 
     # starts by pivoting the dataframe into wideformat
     wide = make_tidy(data, pivot_by=x, more_parms=None, values=y)
@@ -281,11 +281,17 @@ def model_progression(x, y, data, mean, ax, order, palette, collapse_by=None, **
 
     # gets the data as an array to be ploted by plt.plot
     toplot_arr = wide.values.T
-    if 0<= collapse_by < len(order)-1 and isinstance(collapse_by, int):
+
+    if collapse_by is None:
+        pass
+
+    elif 0<= collapse_by < len(order)-1 and isinstance(collapse_by, int):
         # chooses a level of the categorical variable, substracts the values of such level from all other levels
         #  to only show relative change, offsets to the mean of the values of the selected level
         normalizer = toplot_arr[collapse_by,:]
         toplot_arr = toplot_arr - normalizer[:] + np.mean(normalizer)
+
+    else: raise ValueError('order should be a integer corresponding to the column number to collapse by')
 
     # plots individual lines
     ax.plot(toplot_arr,color='gray', alpha=0.4)

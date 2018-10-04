@@ -179,8 +179,8 @@ axes = np.ravel(axes)
 r_plot_ax = axes[0]
 r_plot = sns.barplot(x='modelname', y='value', data=r_filt, ci=None, ax=r_plot_ax, order=list(all_models.values()),
                      palette=model_colors)
-si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=True, ax=r_plot_ax,
-                               order=list(all_models.values()), palette=model_colors, collapse_by=0)
+# si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=False, ax=r_plot_ax,
+#                                order=list(all_models.values()), palette=model_colors, collapse_by=None)
 
 # r_plot = sns.swarmplot(x='modelname', y='value', data=r_filt, ax=r_plot_ax, order=list(all_models.values()),
 #                      palette=model_colors)
@@ -241,8 +241,8 @@ elif alternative == 3: # mean of individual unit MSE
     si_plot_ax = axes[1]
     si_plot = sns.barplot(x='modelname', y=mse_col_name, data=si_mse, ci=None, ax=si_plot_ax, order=list(all_models.values()),
                           palette=model_colors)
-    si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=True, ax=si_plot_ax,
-                                   order= list(all_models.values()), palette=model_colors, collapse_by=0)
+    # si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=False, ax=si_plot_ax,
+    #                                order= list(all_models.values()), palette=model_colors, collapse_by=None)
 
     # si_plot = sns.swarmplot(x='modelname', y=mse_col_name, data=si_mse, ax=si_plot_ax, order=list(all_models.values()),
     #                       palette=model_colors)
