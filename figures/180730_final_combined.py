@@ -54,6 +54,7 @@ all_models = {LN_name: LN, glob_STP_name: glob_STP,
 
 color1 = '#FDBF76'  # yellow for linear model
 color2 = '#CD679A'  # pink for stp model
+color2 = '#5971B6'  # blue for reweighted channels stp
 model_colors = [color1, color2]
 
 # axes subtitles
