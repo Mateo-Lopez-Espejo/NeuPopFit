@@ -4,6 +4,11 @@ import numpy as np
 import oddball_DF as odf
 import seaborn as sns
 import os
+import scipy.stats as sst
+import matplotlib.pyplot as plt
+import itertools as itt
+from decimal import Decimal
+
 
 ''' correlates the STP parameter values to the SSA index, across streams'''
 
@@ -15,9 +20,8 @@ pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__f
 # this load also contains onset fits
 # tail = '180710_DF_all_parms_all_load_only_jal_jackknife'
 
-# this load only contain envelope fits but includesthe STP with channel crosstalk
-tail = '180718_DF_only_env_only_jal_jackknife_3_architectures'
-tail = '180803_DF_only_env_only_jal_jackknife_3_architectures'
+# this load only contain envelope fits but includesthe STP with reweighted channels
+tail = '180813_DF_only_env_only_jal_jackknife_4_architectures_full_SI_pval'
 
 filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)
@@ -33,9 +37,14 @@ ff_Jitterna = pd.isna(DF.Jitter)
 ff_resp = DF.resp_pred == 'resp'
 ff_respna = pd.isna(DF.resp_pred)
 ff_stream = DF.stream.isin(['f1', 'f2'])
+ff_model = DF.modelname == 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 
 
-filtered = DF.loc[ff_param & (ff_Jitter | ff_Jitterna) & (ff_resp | ff_respna) & ff_stream, :]
+# filters for cells with significant SI
+sig_cell = DF.loc[(DF.parameter == 'SI_pvalue') & (DF.value >=0.05), :].cellid.unique()
+ff_signif = DF.cellid.isin(sig_cell)
+
+filtered = DF.loc[ff_param & (ff_Jitter | ff_Jitterna) & (ff_resp | ff_respna) & ff_stream & ff_model & ff_signif, :]
 filtered['to_pivot'] = filtered.parameter == 'SSA_index'
 filtered.to_pivot.replace({True: 'SI', False: 'STP'}, inplace=True)
 
@@ -90,3 +99,26 @@ for ax in axes:
 
 fig.suptitle('SI correlates with STP parameters')
 
+# calculates linear regression between stream SSA index and Tau for pooled streams for the
+# reweighted STP STRF model
+
+for stream, STP_parm in itt.product(tidy.stream.unique(), tidy.STP_parm.unique()):
+    to_regress = tidy.loc[(tidy.STP_parm == STP_parm) & (tidy.stream == stream), ['SSA_index', 'stp_val']]
+    x = to_regress['SSA_index']
+    y = to_regress['stp_val']
+    linreg = sst.linregress(x, y)
+    # fig, ax = plt.subplots()
+    # ax.scatter(x, y)
+    print('stream: {}, parameter: {}, r={}, pvalue={}'.format(stream, STP_parm, linreg.rvalue, linreg.pvalue))
+
+# now pool by stream
+
+for STP_parm in  tidy.STP_parm.unique():
+    to_regress = tidy.loc[(tidy.STP_parm == STP_parm), ['SSA_index', 'stp_val']]
+    x = to_regress['SSA_index']
+    y = to_regress['stp_val']
+    # g = sns.regplot(x, y)
+    linreg = sst.linregress(x, y)
+    print('stream: pooled, parameter: {}, r={}, pvalue={:.3E}'.format(STP_parm, linreg.rvalue, Decimal(linreg.pvalue)))
+
+g = sns.lmplot(x='SSA_index', y='stp_val', data=tidy, hue='STP_parm')

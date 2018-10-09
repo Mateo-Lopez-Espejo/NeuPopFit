@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import oddball_plot as op
 import os
 import itertools as itt
+from decimal import Decimal
 
 LN = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 LN_name = 'LN_STRF'
@@ -57,6 +58,12 @@ lowerlimit = -0.2
 # SI pvlaue thresholf for siginifcance
 alpha = 0.05
 pval_set = 'resp' # unused
+
+# eigher real pvalues or asteriscs showing significance
+sig_asterisc = False
+
+# progression plots
+progplot = False
 
 # right plot alternatives: 1. Mean standard error of the population, 2. correlation coefficient of the population,
 # 3. mean of the mean standard error for the jk SI of each individual unit.
@@ -179,7 +186,9 @@ axes = np.ravel(axes)
 r_plot_ax = axes[0]
 r_plot = sns.barplot(x='modelname', y='value', data=r_filt, ci=None, ax=r_plot_ax, order=list(all_models.values()),
                      palette=model_colors)
-si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=False, ax=r_plot_ax,
+
+if progplot is True:
+    si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=False, ax=r_plot_ax,
                                order=list(all_models.values()), palette=model_colors, collapse_by=0)
 
 # r_plot = sns.swarmplot(x='modelname', y='value', data=r_filt, ax=r_plot_ax, order=list(all_models.values()),
@@ -197,20 +206,23 @@ for cc, col in enumerate(col_list[:-1]):
     xx = r_tidy[col1].values
     yy = r_tidy[col2].values
     w_test = sst.wilcoxon(xx,yy)
-    print('{} vs {}: {}'.format(col1, col2, w_test))
+    print('{} vs {}: {:.3E}'.format(col1, col2, Decimal(w_test.pvalue)))
 
     # sets a key for significance
     pval = w_test.pvalue
-    if pval > 0.05:
-        sig_key = 'ns'
-    elif pval <= 0.05 and pval > 0.01:
-        sig_key = '*'
-    elif pval <= 0.01 and pval > 0.0001:
-        sig_key = '**'
-    elif pval <= 0.0001:
-        sig_key = '***'
-    else: # this should never happen
-        sig_key = ''
+    if sig_asterisc is True:
+        if pval > 0.05:
+            sig_key = 'ns'
+        elif pval <= 0.05 and pval > 0.01:
+            sig_key = '*'
+        elif pval <= 0.01 and pval > 0.0001:
+            sig_key = '**'
+        elif pval <= 0.0001:
+            sig_key = '***'
+        else: # this should never happen
+            sig_key = ''
+    elif sig_asterisc is False:
+        sig_key = '{:.3E}'.format(Decimal(pval))
 
     y = np.mean(r_tidy[col2]) + 0.005
     h = 0.001
@@ -241,7 +253,8 @@ elif alternative == 3: # mean of individual unit MSE
     si_plot_ax = axes[1]
     si_plot = sns.barplot(x='modelname', y=mse_col_name, data=si_mse, ci=None, ax=si_plot_ax, order=list(all_models.values()),
                           palette=model_colors)
-    si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=False, ax=si_plot_ax,
+    if progplot is True:
+        si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=False, ax=si_plot_ax,
                                    order= list(all_models.values()), palette=model_colors, collapse_by=0)
 
     # si_plot = sns.swarmplot(x='modelname', y=mse_col_name, data=si_mse, ax=si_plot_ax, order=list(all_models.values()),
@@ -259,20 +272,23 @@ elif alternative == 3: # mean of individual unit MSE
         xx = si_tidy[col1].values
         yy = si_tidy[col2].values
         w_test = sst.wilcoxon(xx,yy)
-        print('{} vs {}: {}'.format(col1, col2, w_test))
+        print('{} vs {}: {:.3E}'.format(col1, col2, Decimal(w_test.pvalue)))
 
         # sets a key for significance
         pval = w_test.pvalue
-        if pval > 0.05:
-            sig_key = 'ns'
-        elif pval <= 0.05 and pval > 0.01:
-            sig_key = '*'
-        elif pval <= 0.01 and pval > 0.0001:
-            sig_key = '**'
-        elif pval <= 0.0001:
-            sig_key = '***'
-        else: # this should never happen
-            sig_key = ''
+        if sig_asterisc is True:
+            if pval > 0.05:
+                sig_key = 'ns'
+            elif pval <= 0.05 and pval > 0.01:
+                sig_key = '*'
+            elif pval <= 0.01 and pval > 0.0001:
+                sig_key = '**'
+            elif pval <= 0.0001:
+                sig_key = '***'
+            else:  # this should never happen
+                sig_key = ''
+        elif sig_asterisc is False:
+            sig_key = '{:.3E}'.format(Decimal(pval))
 
         y = np.mean(si_tidy[col1]) + 0.005
         h = 0.001
@@ -280,6 +296,17 @@ elif alternative == 3: # mean of individual unit MSE
         x1, x2 = cc, cc+1
         si_plot.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=3, color='k')
         si_plot.text((x1+x2)*.5, y+h, sig_key, ha='center', va='bottom', color='k', fontsize=15)
+
+    # calculats signifiance between first and last columns
+    first = si_tidy[col_list[0]].values
+    last = si_tidy[col_list[-1]].values
+    w_test = sst.wilcoxon(first, last)
+    x1, x2 = 0, 3
+    y = np.mean(si_tidy[col_list[0]]) + 0.010
+    sig_key = '{:.3E}'.format(Decimal(w_test.pvalue))
+    print('{} vs {}: {:.3E}'.format(col_list[0], col_list[-1], Decimal(w_test.pvalue)))
+    si_plot.plot([x1, x1, x2, x2], [y, y + h, y + h, y], lw=3, color='k')
+    si_plot.text((x1 + x2) * .5, y + h, sig_key, ha='center', va='bottom', color='k', fontsize=15)
 
 ### adds format to the axes
 
