@@ -122,3 +122,17 @@ for STP_parm in  tidy.STP_parm.unique():
     print('stream: pooled, parameter: {}, r={}, pvalue={:.3E}'.format(STP_parm, linreg.rvalue, Decimal(linreg.pvalue)))
 
 g = sns.lmplot(x='SSA_index', y='stp_val', data=tidy, hue='STP_parm')
+ax = g.ax
+
+ax.axvline(0, color='black', linestyle='--') # vertical line at 0
+ax.axhline(0, color='black', linestyle='--') # hortizontal line at 0
+
+# make the plot rectangular
+ax.set_xlim(left=-1, right=1)
+ax.set_ylim(bottom=-2.5, top=2.5)
+
+# draws unity line
+lowerleft = np.max([np.min(ax.get_xlim()), np.min(ax.get_ylim())])
+upperright = np.min([np.max(ax.get_xlim()), np.max(ax.get_ylim())])
+ax.plot([lowerleft, upperright], [lowerleft, upperright], 'k--')
+
