@@ -107,21 +107,24 @@ for stream, STP_parm in itt.product(tidy.stream.unique(), tidy.STP_parm.unique()
     x = to_regress['SSA_index']
     y = to_regress['stp_val']
     linreg = sst.linregress(x, y)
-    # fig, ax = plt.subplots()
-    # ax.scatter(x, y)
     print('stream: {}, parameter: {}, r={}, pvalue={}'.format(stream, STP_parm, linreg.rvalue, linreg.pvalue))
 
 # now pool by stream
-
+reg_dict = dict()
 for STP_parm in  tidy.STP_parm.unique():
     to_regress = tidy.loc[(tidy.STP_parm == STP_parm), ['SSA_index', 'stp_val']]
     x = to_regress['SSA_index']
     y = to_regress['stp_val']
-    # g = sns.regplot(x, y)
     linreg = sst.linregress(x, y)
+    label = '{}, r={:.3f}, p={:.3E}'.format(STP_parm, linreg.rvalue, Decimal(linreg.pvalue))
+    reg_dict[STP_parm] = label
     print('stream: pooled, parameter: {}, r={}, pvalue={:.3E}'.format(STP_parm, linreg.rvalue, Decimal(linreg.pvalue)))
 
-g = sns.lmplot(x='SSA_index', y='stp_val', data=tidy, hue='STP_parm')
+# makes a copy of the array, and modifies the values of STP_parms to include the r and pvalues, horrible kludge.
+to_plot = tidy.copy()
+to_plot = to_plot.replace(reg_dict)
+
+g = sns.lmplot(x='SSA_index', y='stp_val', data=to_plot, hue='STP_parm')
 ax = g.ax
 
 ax.axvline(0, color='black', linestyle='--') # vertical line at 0
