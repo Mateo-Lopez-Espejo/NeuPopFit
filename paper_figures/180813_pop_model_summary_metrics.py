@@ -23,7 +23,7 @@ all_models = {LN: LN_name, glob_STP: glob_STP_name,
 color1 = '#FDBF76'  # yellow for linear model
 color2 = 'purple'
 color3 = '#CD679A'  # pink for stp model
-color4 = 'royalblue'
+color4 = '#5054a5' # blue for CW STP
 model_colors = [color1, color2, color3, color4]
 
 # barplot params

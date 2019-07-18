@@ -109,7 +109,7 @@ w = z-z
 SI_delta = np.array([w, z])
 # calculated confidence intervals
 CI = bs.ci(data=z, statfunction=np.mean, n_samples=10000, method='pi')
-ranks = st.ranksums(SI_delta[0, :], SI_delta[1, :])
+ranks = st.ranksums(SI_delta[0, :], SI_delta[1, :]) # note that ranksums is the wrong statistics, should use Wilcoxon
 
 if which_plot == 'scatter':
     mseDF.plot('null_MES', 'alt_MES', kind='scatter', c=color, s=40, alpha=0.5, ax=ax, label='{}'.format(stream), picker=True)

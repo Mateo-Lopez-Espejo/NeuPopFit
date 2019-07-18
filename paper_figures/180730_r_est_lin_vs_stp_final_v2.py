@@ -21,12 +21,6 @@ modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname2 = 'STP STRF prediction'
 suptitile = 'linear model vs STP model'
 
-# this block for the stp vs wc-stp
-# modelname1 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'STP STRF prediction'
-# modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'WC-STP STRF prediction'
-# suptitile = 'STP model vs WC-STP model'
 
 # to be aware, interactive plotting only works properly whenn plotting a single model
 modelnames = [modelname1, modelname2]

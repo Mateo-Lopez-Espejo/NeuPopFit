@@ -8,35 +8,14 @@ import matplotlib.pyplot as plt
 import oddball_plot as op
 import os
 
-#### ploting parameters
-
-# this block for the linear vs stp
-# modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'LN STRF'
-# modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'local STP STRF'
-
-# this block for the stp vs wc-stp
-# modelname1 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'local STP STRF '
-# modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'RW-STP STRF'
-
 # this block for the linear vs wc-stp
 modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname1 = 'LN STRF'
 modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname2 = 'RW-STP STRF'
 
-# this block for the global stp vs independent stp
-# modelname1 = 'odd.1_fir.2x15-stp.2-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'global STP STRF'
-# modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'local STP STRF'
-
 modelnames = [modelname1, modelname2]
 shortnames = [shortname1, shortname2]
-
 
 # this block specifies models for the barplot comparing all architectures
 LN = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
@@ -52,8 +31,14 @@ all_models = {LN_name: LN, glob_STP_name: glob_STP,
               loc_STP_name: loc_STP, RW_STP_name: RW_STP}
 
 
+
 color1 = '#FDBF76'  # yellow for linear model
-color2 = '#CD679A'  # pink for stp model
+color2 = 'purple'
+color3 = '#CD679A'  # pink for stp model
+color4 = '#5054a5'
+
+color1 = '#FDBF76'  # yellow for linear model
+color2 = '#5054a5' # blue for CW STP
 model_colors = [color1, color2]
 
 # axes subtitles
@@ -268,28 +253,15 @@ for model, color in zip(shortnames, model_colors):
     # w = full_reg.pred
     # sns.regplot(z, w, ax=si_ax, color='black', scatter=False, ci=None)
 
-    for sig, marker in zip(SI_significances, ['o', 'v']):
+    ff_sig = si_toplot.significant == SI_significant_name
+    toplot = si_toplot.loc[ff_model & ff_sig]
+    x = toplot.resp
+    y = toplot.pred
 
-        ff_sig = si_toplot.significant == sig
-        toplot = si_toplot.loc[ff_model & ff_sig]
-        x = toplot.resp
-        y = toplot.pred
-
-        if sig ==  SI_significant_name:
-            # if significant, plots with linear regression
-            sig_scat_kws = {'s':30}
-            lab = '{} {}'.format(model, sig)
-            sns.regplot(x, y, ax=si_ax, color=color, marker=marker, label=lab, ci=None,
-                        scatter_kws=sig_scat_kws)
-
-        elif sig ==SI_Nsignificant_name:
-            # if non significant, plots whithout linear regression, smaller scatter, shade of gray?
-            nsig_scat_kws = {'s':10}
-            lab = '{} {}'.format(model, sig)
-            sns.regplot(x, y, ax=si_ax, color=color, marker=marker, fit_reg=False, label=lab, ci=None,
-                        scatter_kws=nsig_scat_kws)
-
-
+    sig_scat_kws = {'s':30}
+    lab = '{} {}'.format(model, SI_significant_name)
+    sns.regplot(x, y, ax=si_ax, color=color, marker='o', label=lab, ci=None,
+                scatter_kws=sig_scat_kws)
 
 # adds format
 # vertical an horizontal lines at 0
