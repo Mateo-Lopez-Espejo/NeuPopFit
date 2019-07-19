@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_plot as op
 import os
+import pathlib as pl
 
 LN = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 LN_name = 'LN_STRF'
@@ -179,11 +180,8 @@ axes = np.ravel(axes)
 r_plot_ax = axes[0]
 r_plot = sns.barplot(x='modelname', y='value', data=r_filt, ci=None, ax=r_plot_ax, order=list(all_models.values()),
                      palette=model_colors)
-si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=True, ax=r_plot_ax,
-                               order=list(all_models.values()), palette=model_colors, collapse_by=0)
-
-# r_plot = sns.swarmplot(x='modelname', y='value', data=r_filt, ax=r_plot_ax, order=list(all_models.values()),
-#                      palette=model_colors)
+# si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=True, ax=r_plot_ax,
+#                                order=list(all_models.values()), palette=model_colors, collapse_by=0)
 
 # adds statistical significance labels
 # iterates over each consecutive column pair
@@ -241,11 +239,8 @@ elif alternative == 3: # mean of individual unit MSE
     si_plot_ax = axes[1]
     si_plot = sns.barplot(x='modelname', y=mse_col_name, data=si_mse, ci=None, ax=si_plot_ax, order=list(all_models.values()),
                           palette=model_colors)
-    si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=True, ax=si_plot_ax,
-                                   order= list(all_models.values()), palette=model_colors, collapse_by=0)
-
-    # si_plot = sns.swarmplot(x='modelname', y=mse_col_name, data=si_mse, ax=si_plot_ax, order=list(all_models.values()),
-    #                       palette=model_colors)
+    # si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=True, ax=si_plot_ax,
+    #                                order= list(all_models.values()), palette=model_colors, collapse_by=0)
 
     # adds statistical significance labels
     # iterates over each consecutive column pair
@@ -283,20 +278,32 @@ elif alternative == 3: # mean of individual unit MSE
 
 ### adds format to the axes
 
-labelsize = 25
+labelsize = 30
 titlesize = 35
 ticksize = 20
 modelnamesize = 15
 
 r_plot.set_ylabel(left_ylabel, fontsize=labelsize)
-r_plot.set_xlabel('model architecture', fontsize=labelsize)
-r_plot.set_title(left_suptitle, fontsize=titlesize)
-r_plot.tick_params(axis='x', which='major', labelsize=modelnamesize)
-r_plot.tick_params(axis='y', which='major', labelsize=ticksize)
-
 si_plot.set_ylabel(right_ylabel, fontsize=labelsize)
-si_plot.set_xlabel('model architecture', fontsize=labelsize)
-si_plot.set_title(right_suptitle, fontsize=titlesize)
-si_plot.tick_params(axis='x', which='major', labelsize=modelnamesize)
-si_plot.tick_params(axis='y', which='major', labelsize=ticksize)
 
+for ax in axes:
+    ax.set_xlabel('model architecture', fontsize=labelsize)
+    ax.set_title(left_suptitle, fontsize=titlesize)
+    ax.tick_params(axis='x', which='major', labelsize=modelnamesize)
+    ax.tick_params(axis='y', which='major', labelsize=ticksize)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+# set figure to full size in tenrec screen
+fig.set_size_inches(19.2, 9.79)
+
+
+root = pl.Path(f'/home/mateo/Pictures/STP_paper')
+filename = f'model_summary'
+if not root.exists(): root.mkdir(parents=True, exist_ok=True)
+
+png = root.joinpath(filename).with_suffix('.png')
+fig.savefig(png, transparent=True, dpi=100)
+
+svg = root.joinpath(filename).with_suffix('.svg')
+fig.savefig(svg, transparent=True)

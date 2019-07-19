@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_plot as op
 import os
+import pathlib as pl
 
 # this block for the linear vs wc-stp
 modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
@@ -199,6 +200,9 @@ for short in shortnames:
 ### plotting
 fig, axes = plt.subplots(1, 2)
 axes = np.ravel(axes)
+markersize = 50
+linewidth = 3
+
 
 # first ax compares r_test between models, color code indicate significance
 r_ax = axes[0]
@@ -214,12 +218,12 @@ for sig in r_tidy.significant.unique():
     x = toplot[shortname1]
     y = toplot[shortname2]
 
-    r_ax.scatter(x, y, color=color, label=sig)
+    r_ax.scatter(x, y, color=color, label=sig, s=markersize)
 
 # adds format
 # vertical an horizontal lines at 0
-r_ax.axvline(0, color='black', linestyle='--')  # vertical line at 0
-r_ax.axhline(0, color='black', linestyle='--')  # hortizontal line at 0
+r_ax.axvline(0, color='black', linestyle='--', linewidth=linewidth)  # vertical line at 0
+r_ax.axhline(0, color='black', linestyle='--', linewidth=linewidth)  # hortizontal line at 0
 
 # makes the plot more square, by making top ylim equal to right xlim
 r_ax.set_ylim(bottom=-0.1, top=1.1)
@@ -228,7 +232,7 @@ r_ax.set_xlim(r_ax.get_ylim())
 # ads identity line
 lowerleft = np.max([np.min(r_ax.get_xlim()), np.min(r_ax.get_ylim())])
 upperright = np.min([np.max(r_ax.get_xlim()), np.max(r_ax.get_ylim())])
-r_ax.plot([lowerleft, upperright], [lowerleft, upperright], 'k--')
+r_ax.plot([lowerleft, upperright], [lowerleft, upperright], 'k--', linewidth=linewidth)
 
 # color and size for axis labels
 r_ax.set_xlabel(shortname1, fontsize=20, color=color1)
@@ -258,15 +262,14 @@ for model, color in zip(shortnames, model_colors):
     x = toplot.resp
     y = toplot.pred
 
-    sig_scat_kws = {'s':30}
     lab = '{} {}'.format(model, SI_significant_name)
     sns.regplot(x, y, ax=si_ax, color=color, marker='o', label=lab, ci=None,
-                scatter_kws=sig_scat_kws)
+                scatter_kws={'s':markersize}, line_kws={'linewidth':linewidth})
 
 # adds format
 # vertical an horizontal lines at 0
-si_ax.axvline(0, color='black', linestyle='--')  # vertical line at 0
-si_ax.axhline(0, color='black', linestyle='--')  # hortizontal line at 0
+si_ax.axvline(0, color='black', linestyle='--', linewidth=linewidth)  # vertical line at 0
+si_ax.axhline(0, color='black', linestyle='--', linewidth=linewidth)  # hortizontal line at 0
 
 # makes the plot more square, by making top ylim equal to right xlim...
 si_ax.set_ylim(bottom=si_ax.get_ylim()[0], top=si_ax.get_xlim()[1])
@@ -277,7 +280,7 @@ si_ax.set_ylim(bottom=lowerlimit)
 
 lowerleft = np.max([np.min(si_ax.get_xlim()), np.min(si_ax.get_ylim())])
 upperright = np.min([np.max(si_ax.get_xlim()), np.max(si_ax.get_ylim())])
-si_ax.plot([lowerleft, upperright], [lowerleft, upperright], 'k--')
+si_ax.plot([lowerleft, upperright], [lowerleft, upperright], 'k--', linewidth=linewidth)
 
 si_ax.set_xlabel('actual SI', fontsize=20)
 si_ax.set_ylabel('predicted SI', fontsize=20)
@@ -287,3 +290,26 @@ si_ax.set_title(subtitle2, fontsize=20)
 legend = si_ax.legend(loc='upper left')
 legend.set_title(None)
 legend.get_frame().set_linewidth(0.0)
+
+
+for ax in axes:
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.tick_params(labelsize=20)
+    ax.title.set_size(30)
+    ax.xaxis.label.set_size(30)
+    ax.yaxis.label.set_size(30)
+
+# set figure to full size in tenrec screen
+fig.set_size_inches(19.2, 9.79)
+
+
+root = pl.Path(f'/home/mateo/Pictures/STP_paper')
+filename = f'LN_RW-STP'
+if not root.exists(): root.mkdir(parents=True, exist_ok=True)
+
+png = root.joinpath(filename).with_suffix('.png')
+fig.savefig(png, transparent=True, dpi=100)
+
+svg = root.joinpath(filename).with_suffix('.svg')
+fig.savefig(svg, transparent=True)
