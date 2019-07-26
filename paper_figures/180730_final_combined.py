@@ -9,6 +9,12 @@ import oddball_plot as op
 import os
 import pathlib as pl
 
+
+"""
+Works with older versions of NEMS (githash: 3a25cc5259f30e2b7a961e4a9fac2477e57b8144)
+and nems_db (githash: 3fefdb537b100c346486266c97f18e3f55cb5086)
+"""
+
 # this block for the linear vs wc-stp
 modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname1 = 'LN STRF'
@@ -220,6 +226,12 @@ for sig in r_tidy.significant.unique():
 
     r_ax.scatter(x, y, color=color, label=sig, s=markersize)
 
+    #example cell
+    if 1:
+        example_cell = 'chn066b-c1'
+        excell = r_tidy.loc[(r_tidy.significant == sig) & (r_tidy.cellid == example_cell), [shortname1, shortname2]]
+        r_ax.scatter(excell[shortname1], excell[shortname2], color= color, marker='p')
+
 # adds format
 # vertical an horizontal lines at 0
 r_ax.axvline(0, color='black', linestyle='--', linewidth=linewidth)  # vertical line at 0
@@ -303,13 +315,13 @@ for ax in axes:
 # set figure to full size in tenrec screen
 fig.set_size_inches(19.2, 9.79)
 
-
-root = pl.Path(f'/home/mateo/Pictures/STP_paper')
-filename = f'LN_RW-STP'
-if not root.exists(): root.mkdir(parents=True, exist_ok=True)
-
-png = root.joinpath(filename).with_suffix('.png')
-fig.savefig(png, transparent=True, dpi=100)
-
-svg = root.joinpath(filename).with_suffix('.svg')
-fig.savefig(svg, transparent=True)
+#
+# root = pl.Path(f'/home/mateo/Pictures/STP_paper')
+# filename = f'LN_RW-STP'
+# if not root.exists(): root.mkdir(parents=True, exist_ok=True)
+#
+# png = root.joinpath(filename).with_suffix('.png')
+# fig.savefig(png, transparent=True, dpi=100)
+#
+# svg = root.joinpath(filename).with_suffix('.svg')
+# fig.savefig(svg, transparent=True)

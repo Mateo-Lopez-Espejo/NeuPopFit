@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import oddball_plot as op
 import os
+from decimal import Decimal
 
 #### ploting parameters
 
@@ -53,7 +54,7 @@ all_models = {LN_name: LN, glob_STP_name: glob_STP,
 
 
 color1 = '#FDBF76'  # yellow for linear model
-color2 = '#CD679A'  # pink for stp model
+color2 = '#5971B6'  # blue for reweighted channels stp
 model_colors = [color1, color2]
 
 # axes subtitles
@@ -180,7 +181,7 @@ pv_tidy['significant'] = pv_tidy[pval_set] <= alpha
 pv_single_mod = pv_tidy.loc[pv_tidy.modelname==shortname1, :]
 sig_count = pv_single_mod.significant.sum()
 nsig_count = (pv_single_mod.shape[0] - sig_count)
-print('{}/{} cells with significant SI using shuffle test'.format(sig_count, pv_single_mod.shape[0]))
+print('{}/{} cells with significant SI using shuffle test, p<{}'.format(sig_count, pv_single_mod.shape[0], alpha))
 SI_significant_name = 'p<{} (n={})'.format(alpha, sig_count)
 SI_Nsignificant_name = 'NS (n={})'.format(nsig_count)
 SI_significances = [SI_significant_name, SI_Nsignificant_name]
@@ -207,8 +208,9 @@ for short in shortnames:
     resp = wdf['resp'].values
     pred = wdf['pred'].values
     linreg = sst.linregress(resp, pred)
-    print('{}: resp mean {:.3f}, pred mean {:.3f}, corcoef {:.3f}, slope {:.3f}'.
-          format(short, np.mean(resp), np.mean(pred), linreg.rvalue, linreg.slope))
+    print('{}: resp mean {:.3f}, pred mean {:.3f}, corcoef {:.3f}, slope {:.3f}, pvalue {:.3E}'.
+          format(short, np.mean(resp), np.mean(pred), linreg.rvalue, linreg.slope, Decimal(linreg.pvalue)))
+
 
 ########################################################################################################################
 ### plotting

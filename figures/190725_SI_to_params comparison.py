@@ -14,6 +14,27 @@ from decimal import Decimal
 
 
 
+# parameters
+parameters = ['SSA_index', 'tau', 'u']
+
+# stream = ['f1', 'f2', 'cell']
+stream = ['f1', 'f2']
+
+# Jitter = ['Jitter_Off', 'Jitter_On', 'Jitter_Both']
+Jitter = ['Jitter_Both']
+
+# goodness of fit filter
+metric = 'r_test'
+threshold = 0
+
+# limit to force values to
+lowerlimit = -0.2
+
+# SI pvlaue
+alpha = 0.05
+pval_set = 'resp'
+
+###############################################################################
 # test files. the paths will be different between my desktop and laptop.
 # pickles = '{}/pickles'.format(os.path.split(os.path.dirname(os.path.realpath(__file__)))[0])
 pickles = '/home/mateo/code/oddball_analysis/pickles'
@@ -27,11 +48,33 @@ tail = '180813_DF_only_env_only_jal_jackknife_4_architectures_full_SI_pval'
 filename = os.path.normcase('{}/{}'.format(pickles, tail))
 loaded = jl.load(filename)
 
+#########
+
+# list of cells used to plot paper_figures/180730_final_combined.py model comparison
+# only contains cells with significant real SI
+goodcells = ['chn004b-a1', 'chn004c-b1', 'chn005d-a1', 'chn029d-a1',
+       'chn062c-c1', 'chn062f-a2', 'chn063b-d1', 'chn063h-b1',
+       'chn065c-d1', 'chn065d-c1', 'chn066b-c1', 'chn066c-a1',
+       'chn067d-b1', 'chn073b-b1', 'eno001f-a1', 'eno002c-c1',
+       'eno002c-c2', 'eno005d-a1', 'eno006d-c1', 'eno008e-b1',
+       'eno013d-a1', 'eno035c-a1', 'gus016c-a1', 'gus016c-c2',
+       'gus019d-b1', 'gus019e-a1', 'gus020c-a1', 'gus020c-c1',
+       'gus021c-a1', 'gus021c-b1', 'gus021f-a2', 'gus023e-c1',
+       'gus023f-c1', 'gus025b-a1', 'gus026d-a1', 'gus030d-b1',
+       'gus035a-a1', 'gus035a-a2', 'gus036b-b1', 'gus036b-c1',
+       'gus036b-c2', 'gus037d-a1', 'gus037d-a2', 'gus037e-d2']
+
+
+
+
+######## deals with the real data
 DF = loaded.copy()
 
 DF = odf.collapse_jackknife(DF)
 DF = odf.filter_by_metric(DF,threshold=0.2)
 
+
+ff_cells = DF.cellid.isin(goodcells)
 ff_param = DF.parameter.isin(['SSA_index', 'tau', 'u'])
 ff_Jitter = DF.Jitter == 'Jitter_Both'
 ff_Jitterna = pd.isna(DF.Jitter)
@@ -45,7 +88,10 @@ ff_model = DF.modelname == 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si
 sig_cell = DF.loc[(DF.parameter == 'SI_pvalue') & (DF.value >=0.05), :].cellid.unique()
 ff_signif = DF.cellid.isin(sig_cell)
 
-filtered = DF.loc[ff_param & (ff_Jitter | ff_Jitterna) & (ff_resp | ff_respna) & ff_stream & ff_model & ff_signif, :]
+filtered = DF.loc[ff_cells & ff_param &
+                  (ff_Jitter | ff_Jitterna) &
+                  (ff_resp | ff_respna) &
+                  ff_stream & ff_model & ff_signif, :]
 filtered['to_pivot'] = filtered.parameter == 'SSA_index'
 filtered.to_pivot.replace({True: 'SI', False: 'STP'}, inplace=True)
 

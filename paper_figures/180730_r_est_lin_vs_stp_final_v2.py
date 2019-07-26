@@ -10,6 +10,10 @@ import os
 
 '''
 add a on pick function to plot specific neuron examples from the scatter plot
+
+Works with older versions of NEMS (githash: 3a25cc5259f30e2b7a961e4a9fac2477e57b8144)
+and nems_db (githash: 3fefdb537b100c346486266c97f18e3f55cb5086)
+
 '''
 
 
@@ -142,6 +146,14 @@ g = sns.lmplot(x=shortname1, y=shortname2, hue='significant',
 
 fig = g.fig
 ax = g.ax
+
+
+# finds the example cell
+if 1:
+    example_cell = 'chn066b-c1'
+    ii = tidy.index.get_loc(example_cell)
+    excell = tidy.iloc[ii]
+    ax.scatter(excell[shortname1], excell[shortname2], color='red')
 
 # vertical an horizontal lines at 0
 ax.axvline(0, color='black', linestyle='--')  # vertical line at 0

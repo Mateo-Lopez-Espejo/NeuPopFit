@@ -10,29 +10,16 @@ import os
 
 #### ploting parameters
 
-# this block for the linear vs stp
-# modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'LN STRF'
-# modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'local STP STRF'
-
-# this block for the stp vs wc-stp
-# modelname1 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'local STP STRF '
-# modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'RW-STP STRF'
-
+"""
+Works with older versions of NEMS (githash: 3a25cc5259f30e2b7a961e4a9fac2477e57b8144)
+and nems_db (githash: 3fefdb537b100c346486266c97f18e3f55cb5086)
+"""
 # this block for the linear vs wc-stp
 modelname1 = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname1 = 'LN STRF'
 modelname2 = 'odd.1_wc.2x2.c-stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 shortname2 = 'RW-STP STRF'
 
-# this block for the global stp vs independent stp
-# modelname1 = 'odd.1_fir.2x15-stp.2-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname1 = 'global STP STRF'
-# modelname2 = 'odd.1_stp.2-fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
-# shortname2 = 'local STP STRF'
 
 modelnames = [modelname1, modelname2]
 shortnames = [shortname1, shortname2]

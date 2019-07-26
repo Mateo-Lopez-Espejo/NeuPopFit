@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 import oddball_plot as op
 import os
 import pathlib as pl
+import itertools as itt
+
+"""
+Works with older versions of NEMS (githash: 3a25cc5259f30e2b7a961e4a9fac2477e57b8144)
+and nems_db (githash: 3fefdb537b100c346486266c97f18e3f55cb5086)
+"""
 
 LN = 'odd.1_fir.2x15-lvl.1_basic-nftrial_si.jk-est.jal-val.jal'
 LN_name = 'LN_STRF'
@@ -178,15 +184,15 @@ axes = np.ravel(axes)
 ########### r_test plot, left panel  ###########
 
 r_plot_ax = axes[0]
-r_plot = sns.barplot(x='modelname', y='value', data=r_filt, ci=None, ax=r_plot_ax, order=list(all_models.values()),
-                     palette=model_colors)
-# si_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=True, ax=r_plot_ax,
-#                                order=list(all_models.values()), palette=model_colors, collapse_by=0)
+# r_plot = sns.barplot(x='modelname', y='value', data=r_filt, ci=None, ax=r_plot_ax, order=list(all_models.values()),
+#                      palette=model_colors)
+r_plot = op.model_progression(x='modelname', y='value', data=r_filt, mean=True, ax=r_plot_ax,
+                               order=list(all_models.values()), palette=model_colors, collapse_by=2, swarm=False)
 
 # adds statistical significance labels
 # iterates over each consecutive column pair
 col_list = list(all_models.values())
-print('r_test comparison:\n')
+print('\nr_test comparison:\n')
 for cc, col in enumerate(col_list[:-1]):
     # select two consecutive columns
     col1 = col
@@ -195,7 +201,6 @@ for cc, col in enumerate(col_list[:-1]):
     xx = r_tidy[col1].values
     yy = r_tidy[col2].values
     w_test = sst.wilcoxon(xx,yy)
-    print('{} vs {}: {}'.format(col1, col2, w_test))
 
     # sets a key for significance
     pval = w_test.pvalue
@@ -218,6 +223,16 @@ for cc, col in enumerate(col_list[:-1]):
     r_plot.text((x1+x2)*.5, y+h, sig_key, ha='center', va='bottom', color='k', fontsize=15)
 
 
+# prints willcoxton signed rank test
+
+for col1, col2 in itt.combinations(col_list,2):
+    xx = r_tidy[col1].values
+    yy = r_tidy[col2].values
+    w_test = sst.wilcoxon(xx,yy)
+    print('{} vs {}: {}'.format(col1, col2, w_test))
+
+
+
 ########### SI MSE plot, right panel  ###########
 
 if alternative == 1: # population MSE
@@ -237,10 +252,10 @@ elif alternative == 2: # population linregress
 elif alternative == 3: # mean of individual unit MSE
 
     si_plot_ax = axes[1]
-    si_plot = sns.barplot(x='modelname', y=mse_col_name, data=si_mse, ci=None, ax=si_plot_ax, order=list(all_models.values()),
-                          palette=model_colors)
-    # si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=True, ax=si_plot_ax,
-    #                                order= list(all_models.values()), palette=model_colors, collapse_by=0)
+    # si_plot = sns.barplot(x='modelname', y=mse_col_name, data=si_mse, ci=None, ax=si_plot_ax, order=list(all_models.values()),
+    #                       palette=model_colors)
+    si_plot = op.model_progression(x='modelname', y=mse_col_name, data=si_mse, mean=True, ax=si_plot_ax,
+                                   order= list(all_models.values()), palette=model_colors, collapse_by=2, swarm=False)
 
     # adds statistical significance labels
     # iterates over each consecutive column pair
@@ -254,7 +269,6 @@ elif alternative == 3: # mean of individual unit MSE
         xx = si_tidy[col1].values
         yy = si_tidy[col2].values
         w_test = sst.wilcoxon(xx,yy)
-        print('{} vs {}: {}'.format(col1, col2, w_test))
 
         # sets a key for significance
         pval = w_test.pvalue
@@ -275,6 +289,13 @@ elif alternative == 3: # mean of individual unit MSE
         x1, x2 = cc, cc+1
         si_plot.plot([x1, x1, x2, x2], [y, y+h, y+h, y], lw=3, color='k')
         si_plot.text((x1+x2)*.5, y+h, sig_key, ha='center', va='bottom', color='k', fontsize=15)
+
+
+for col1, col2 in itt.combinations(col_list,2):
+    xx = si_tidy[col1].values
+    yy = si_tidy[col2].values
+    w_test = sst.wilcoxon(xx,yy)
+    print('{} vs {}: {}'.format(col1, col2, w_test))
 
 ### adds format to the axes
 
@@ -302,8 +323,8 @@ root = pl.Path(f'/home/mateo/Pictures/STP_paper')
 filename = f'model_summary'
 if not root.exists(): root.mkdir(parents=True, exist_ok=True)
 
-png = root.joinpath(filename).with_suffix('.png')
-fig.savefig(png, transparent=True, dpi=100)
-
-svg = root.joinpath(filename).with_suffix('.svg')
-fig.savefig(svg, transparent=True)
+# png = root.joinpath(filename).with_suffix('.png')
+# fig.savefig(png, transparent=True, dpi=100)
+#
+# svg = root.joinpath(filename).with_suffix('.svg')
+# fig.savefig(svg, transparent=True)

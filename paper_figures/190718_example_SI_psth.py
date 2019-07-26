@@ -7,11 +7,8 @@ import oddball_functions as of
 import pathlib as pl
 
 """
-
 Works with older versions of NEMS (githash: 3a25cc5259f30e2b7a961e4a9fac2477e57b8144)
 and nems_db (githash: 3fefdb537b100c346486266c97f18e3f55cb5086)
-
-
 """
 
 # this block for the linear vs wc-stp
